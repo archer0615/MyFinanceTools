@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f766e" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/forms.css" />
+  <title>Taiwan Insurance Planner</title>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">保</span>
+      <div>
+        <strong>InsurancePlanner</strong>
+        <small>Offline Edition</small>
+      </div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+  </aside>
+
+  <main class="workspace">
+    <header class="topbar">
+      <div>
+        <strong id="pageTitle">個人保險財務工作台</strong>
+        <span>純靜態 HTML/CSS/JavaScript，支援 file:// 與 localStorage</span>
+      </div>
+      <div class="actions">
+        <button class="btn secondary" id="sampleBtn">載入範例</button>
+        <button class="btn secondary" id="exportJson">匯出工作區</button>
+        <label class="btn secondary file-btn">匯入工作區<input id="importJson" type="file" accept="application/json" /></label>
+        <button class="btn secondary" id="printPdf">匯出 PDF</button>
+        <button class="btn secondary" id="notifyBtn">啟用提醒</button>
+        <button class="btn icon" id="themeToggle" title="切換主題">◐</button>
+      </div>
+    </header>
+
+    <section id="dashboard-section" class="view"></section>
+    <section id="need-calculator-section" class="view hidden"></section>
+    <section id="health-check-section" class="view hidden"></section>
+    <section id="irr-section" class="view hidden"></section>
+    <section id="compare-section" class="view hidden"></section>
+    <section id="retirement-section" class="view hidden"></section>
+    <section id="scenario-section" class="view hidden"></section>
+    <section id="premium-analysis-section" class="view hidden"></section>
+    <section id="family-section" class="view hidden"></section>
+    <section id="settings-section" class="view hidden"></section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <div id="modalRoot"></div>
+
+  <script src="data/policyTemplates.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/irr.js"></script>
+  <script src="js/healthcheck.js"></script>
+  <script src="js/retirement.js"></script>
+  <script src="js/scenario.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

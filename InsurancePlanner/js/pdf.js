@@ -1,0 +1,3 @@
+function exportPdf(){
+  window.print();
+}

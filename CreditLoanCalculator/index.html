@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>信用貸款月還款試算</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="print-summary panel" id="print-summary">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Printable Summary</p>
+          <h2>信用貸款試算報表摘要</h2>
+          <p id="print-summary-note">請先完成試算，再輸出 PDF。</p>
+        </div>
+      </div>
+
+      <div class="print-meta-grid">
+        <article class="metric-card">
+          <span class="metric-label">姓名</span>
+          <strong id="print-user-name">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">銀行 / 方案</span>
+          <strong id="print-bank-name">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">試算日期</span>
+          <strong id="print-report-date">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">備註</span>
+          <strong id="print-report-note">-</strong>
+        </article>
+      </div>
+
+      <div class="metrics">
+        <article class="metric-card">
+          <span class="metric-label">貸款條件</span>
+          <strong id="print-loan-meta">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">月付金 / 寬限期</span>
+          <strong id="print-payment-meta">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">總成本</span>
+          <strong id="print-cost-meta">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">APR / 提前清償</span>
+          <strong id="print-apr-meta">-</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Credit Loan Calculator</p>
+        <h1>信用貸款月還款、APR 與提前清償一次看。</h1>
+        <p class="subtitle">
+          支援本息平均攤還、寬限期只繳息、分段利率、總費用年百分率概算，以及提前清償後的利息節省與縮短期數比較。
+        </p>
+      </div>
+
+      <div class="hero-badges">
+        <span>本息平均攤還</span>
+        <span>寬限期試算</span>
+        <span>分段利率</span>
+        <span>APR 概算</span>
+        <span>提前清償比較</span>
+      </div>
+    </section>
+
+    <section class="panel calculator-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Loan Input</p>
+          <h2>輸入貸款條件</h2>
+          <p>先填基本貸款條件，再依需要加入寬限期、費用、分段利率與提前清償條件。</p>
+        </div>
+
+        <div class="button-row">
+          <a class="ghost-button link-button" href="../index.html">返回 Other 首頁</a>
+          <button id="sample-button" class="ghost-button" type="button">帶入範例</button>
+          <button id="export-json-button" class="ghost-button" type="button">匯出 JSON</button>
+          <button id="import-json-button" class="ghost-button" type="button">匯入 JSON</button>
+          <input id="import-json-file" type="file" accept="application/json" hidden>
+          <a id="open-share-page-button" class="ghost-button link-button" href="share.html" target="_blank" rel="noopener noreferrer">開啟分享頁</a>
+          <button id="export-pdf-button" class="ghost-button" type="button">輸出 PDF</button>
+          <button id="reset-button" class="ghost-button" type="button">清空欄位</button>
+          <button id="calculate-button" class="primary-button" type="button">開始試算</button>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="field-card">
+          <span class="field-label">貸款金額</span>
+          <input id="loan-amount" type="number" min="0.01" step="0.1" placeholder="50">
+          <span class="field-hint">單位：萬</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">基準年利率</span>
+          <input id="annual-rate" type="number" min="0" step="0.01" placeholder="2.88">
+          <span class="field-hint">未設定分段利率時使用</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">總期數</span>
+          <input id="loan-months" type="number" min="1" step="1" placeholder="60">
+          <span class="field-hint">單位：月</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">開辦費 / 手續費</span>
+          <input id="handling-fee" type="number" min="0" step="100" placeholder="3000">
+          <span class="field-hint">單位：元，可不填，預設 0</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">寬限期月數</span>
+          <input id="grace-months" type="number" min="0" step="1" placeholder="6">
+          <span class="field-hint">寬限期內只繳利息</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">首期日期</span>
+          <input id="first-payment-date" type="date">
+          <span class="field-hint">用來推算每一期實際年月</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">固定扣款日</span>
+          <input id="payment-day" type="number" min="0" max="28" step="1" placeholder="15">
+          <span class="field-hint">1 到 28；填 0 或留白代表沿用首期日期日數</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">提前清償月份</span>
+          <input id="prepay-month" type="number" min="0" step="1" placeholder="12">
+          <span class="field-hint">填 0 或留白代表不比較</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">提前清償金額</span>
+          <input id="prepay-amount" type="number" min="0" step="0.1" placeholder="10">
+          <span class="field-hint">單位：萬，在該月份月付金後額外還本金</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">提前清償手續費</span>
+          <input id="prepay-fee" type="number" min="0" step="100" placeholder="3000">
+          <span class="field-hint">單位：元，沒有可填 0</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">提前清償違約金率</span>
+          <input id="prepay-penalty-rate" type="number" min="0" step="0.01" placeholder="1">
+          <span class="field-hint">單位：%，以提前清償本金計</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">報表姓名</span>
+          <input id="report-user-name" type="text" placeholder="王小明">
+          <span class="field-hint">PDF 報表抬頭使用</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">銀行 / 方案名稱</span>
+          <input id="report-bank-name" type="text" placeholder="OO 銀行信貸方案">
+          <span class="field-hint">PDF 報表抬頭使用</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">試算日期</span>
+          <input id="report-date" type="date">
+          <span class="field-hint">PDF 報表顯示日期</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">報表備註</span>
+          <input id="report-note" type="text" placeholder="供內部比較使用">
+          <span class="field-hint">PDF 報表抬頭使用</span>
+        </label>
+      </div>
+
+      <p id="status" class="status">請輸入資料後按下「開始試算」。</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Multi Prepayment</p>
+          <h2>多筆提前清償模擬</h2>
+          <p>保留上方主要提前清償設定外，也可再加入多筆額外清償事件，模擬不同月份分批還款。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="add-extra-prepay-button" class="ghost-button" type="button">新增提前清償列</button>
+        </div>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table">
+          <thead>
+            <tr>
+              <th>月份</th>
+              <th>金額(萬)</th>
+              <th>手續費(元)</th>
+              <th>違約金率(%)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="extra-prepay-body">
+            <tr>
+              <td colspan="5" class="empty-cell">如有多次提前清償需求，可新增列後輸入月份與金額。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Tiered Rates</p>
+          <h2>分段利率設定</h2>
+          <p>可模擬前幾期優惠利率、之後調升利率。系統會在分段切換時重算剩餘本金的月付金。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="add-rate-tier-button" class="ghost-button" type="button">新增利率階段</button>
+          <button id="tier-sample-button" class="ghost-button" type="button">帶入分段範例</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="result-table tier-table">
+          <thead>
+            <tr>
+              <th>起始月份</th>
+              <th>結束月份</th>
+              <th>年利率</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="rate-tier-body">
+            <tr>
+              <td><input class="tier-input" type="number" min="1" step="1" value="1"></td>
+              <td><input class="tier-input" type="number" min="1" step="1" placeholder="12"></td>
+              <td><input class="tier-input" type="number" min="0" step="0.01" placeholder="2.10"></td>
+              <td><button class="ghost-button tier-remove-button" type="button">刪除</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="status">若未完整填寫分段資料，系統會退回使用基準年利率。</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Indexed Rate Model</p>
+          <h2>浮動利率 / 指標利率模型</h2>
+          <p>用指標利率加碼、重訂頻率與預估每次調整幅度，自動生成整段貸款期間的浮動利率路徑。</p>
+        </div>
+      </div>
+
+      <div class="form-grid compact-form-grid">
+        <label class="field-card">
+          <span class="field-label">啟用指標利率</span>
+          <select id="indexed-rate-enabled" class="field-select">
+            <option value="off">關閉</option>
+            <option value="on">啟用</option>
+          </select>
+          <span class="field-hint">啟用後，會覆蓋上方手動分段利率</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">目前指標利率</span>
+          <input id="index-base-rate" type="number" min="0" step="0.01" placeholder="1.35">
+          <span class="field-hint">單位：%</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">固定加碼</span>
+          <input id="index-spread-rate" type="number" min="0" step="0.01" placeholder="1.53">
+          <span class="field-hint">單位：%，實際貸款利率 = 指標 + 加碼</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">重訂頻率</span>
+          <input id="index-reset-months" type="number" min="1" step="1" placeholder="3">
+          <span class="field-hint">單位：月，例如每 3 個月重訂一次</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">每次重訂預估變動</span>
+          <input id="index-step-per-reset" type="number" step="0.01" placeholder="0.12">
+          <span class="field-hint">單位：%，可填負值模擬降息</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">利率下限</span>
+          <input id="index-floor-rate" type="number" min="0" step="0.01" placeholder="2.20">
+          <span class="field-hint">單位：%，可留空</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">利率上限</span>
+          <input id="index-cap-rate" type="number" min="0" step="0.01" placeholder="4.50">
+          <span class="field-hint">單位：%，可留空</span>
+        </label>
+      </div>
+
+      <p id="indexed-rate-summary" class="status">未啟用指標利率模型時，系統會沿用基準年利率或手動分段利率。</p>
+    </section>
+
+    <section class="metrics">
+      <article class="metric-card accent">
+        <span class="metric-label">目前月付金</span>
+        <strong id="monthly-payment">-</strong>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">寬限期月付金</span>
+        <strong id="grace-payment">-</strong>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">總還款金額</span>
+        <strong id="total-payment">-</strong>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">總利息支出</span>
+        <strong id="total-interest">-</strong>
+      </article>
+    </section>
+
+    <section class="metrics metrics-secondary">
+      <article class="metric-card">
+        <span class="metric-label">實拿金額</span>
+        <strong id="net-amount">-</strong>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">費用占貸款比</span>
+        <strong id="fee-ratio">-</strong>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">平均每月利息</span>
+        <strong id="average-interest">-</strong>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">首月利息</span>
+        <strong id="first-interest">-</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Income Stress Test</p>
+          <h2>DSR / 收入比試算與可貸額度反推</h2>
+          <p>可輸入月收入與可接受月付上限，查看目前方案的月付壓力，並反推在相同利率與期數下大約可貸多少。</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="field-card">
+          <span class="field-label">月收入</span>
+          <input id="monthly-income" type="number" min="0" step="1000" placeholder="60000">
+          <span class="field-hint">單位：元</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">既有貸款月付</span>
+          <input id="existing-debt-payment" type="number" min="0" step="1000" placeholder="12000">
+          <span class="field-hint">單位：元，含其他信貸 / 車貸 / 分期</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">每月固定支出</span>
+          <input id="fixed-living-expense" type="number" min="0" step="1000" placeholder="18000">
+          <span class="field-hint">單位：元，可填房租或固定生活支出</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">可接受月付上限</span>
+          <input id="affordable-payment" type="number" min="0" step="0.1" placeholder="1.5">
+          <span class="field-hint">單位：萬</span>
+        </label>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">DSR / 收入比</span>
+          <strong id="dsr-value">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">壓力判斷</span>
+          <strong id="dsr-status">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">反推可貸額度</span>
+          <strong id="max-loan-amount">-</strong>
+        </article>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card">
+          <span class="metric-label">保守建議額度</span>
+          <strong id="loan-range-conservative">-</strong>
+        </article>
+
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">一般建議額度</span>
+          <strong id="loan-range-balanced">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">壓力上限額度</span>
+          <strong id="loan-range-aggressive">-</strong>
+        </article>
+      </div>
+
+      <p id="loan-range-summary" class="status">填入月收入或可接受月付上限後，這裡會顯示可貸額度區間建議。</p>
+
+      <div class="form-grid compact-form-grid stress-form-grid">
+        <label class="field-card">
+          <span class="field-label">收入下修幅度</span>
+          <input id="stress-income-drop" type="number" min="0" step="1" placeholder="10">
+          <span class="field-hint">單位：%，模擬收入下滑</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">升息幅度</span>
+          <input id="stress-rate-rise" type="number" min="0" step="0.01" placeholder="0.5">
+          <span class="field-hint">單位：%，模擬貸款利率上升</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">額外支出衝擊</span>
+          <input id="stress-expense-shock" type="number" min="0" step="1000" placeholder="8000">
+          <span class="field-hint">單位：元，模擬突發固定支出</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">安全餘裕門檻</span>
+          <input id="stress-safety-buffer" type="number" min="0" step="1000" placeholder="10000">
+          <span class="field-hint">單位：元，用來判斷現金流是否過緊</span>
+        </label>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">基準貸後餘額</span>
+          <strong id="stress-base-surplus">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">最差情境餘額</span>
+          <strong id="stress-worst-surplus">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">現金流臨界利率</span>
+          <strong id="stress-break-rate">-</strong>
+        </article>
+      </div>
+
+      <p id="stress-test-summary" class="status">填入月收入與壓力參數後，這裡會顯示現金流壓力測試結果。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>情境</th>
+              <th>月付金(萬)</th>
+              <th>DSR</th>
+              <th>總月負債</th>
+              <th>貸後餘額</th>
+              <th>壓力判讀</th>
+            </tr>
+          </thead>
+          <tbody id="stress-test-body">
+            <tr>
+              <td colspan="6" class="empty-cell">完成試算後顯示現金流壓力測試。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Monte Carlo</p>
+          <h2>Monte Carlo 現金流壓力測試</h2>
+          <p>用隨機收入波動、利率波動與突發支出事件，估計整段貸款期間現金流失守機率。</p>
+        </div>
+      </div>
+
+      <div class="form-grid compact-form-grid">
+        <label class="field-card">
+          <span class="field-label">模擬次數</span>
+          <input id="monte-carlo-iterations" type="number" min="100" step="100" placeholder="1000">
+          <span class="field-hint">建議 500 到 5000 次</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">月收入波動</span>
+          <input id="monte-carlo-income-volatility" type="number" min="0" step="0.1" placeholder="8">
+          <span class="field-hint">單位：%，每月收入標準波動幅度</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">利率波動</span>
+          <input id="monte-carlo-rate-volatility" type="number" min="0" step="0.01" placeholder="0.2">
+          <span class="field-hint">單位：%，每次重訂的利率隨機波動</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">突發支出機率</span>
+          <input id="monte-carlo-expense-shock-probability" type="number" min="0" max="100" step="0.1" placeholder="12">
+          <span class="field-hint">單位：%，每月發生一次額外支出事件的機率</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">單次突發支出</span>
+          <input id="monte-carlo-expense-shock-amount" type="number" min="0" step="1000" placeholder="12000">
+          <span class="field-hint">單位：元</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">隨機種子</span>
+          <input id="monte-carlo-seed" type="text" placeholder="demo-seed">
+          <span class="field-hint">留空會依目前輸入自動產生</span>
+        </label>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">失守機率</span>
+          <strong id="monte-carlo-fail-rate">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">中位最差餘額</span>
+          <strong id="monte-carlo-median-surplus">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">P10 最差餘額</span>
+          <strong id="monte-carlo-p10-surplus">-</strong>
+        </article>
+      </div>
+
+      <p id="monte-carlo-summary" class="status">填入月收入後，這裡會顯示 Monte Carlo 現金流壓力測試結果。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>區間</th>
+              <th>筆數</th>
+              <th>占比</th>
+              <th>代表最差餘額</th>
+            </tr>
+          </thead>
+          <tbody id="monte-carlo-body">
+            <tr>
+              <td colspan="4" class="empty-cell">完成試算後顯示 Monte Carlo 壓力測試。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Income Overview</p>
+          <h2>收入與負債總覽</h2>
+          <p>把新貸款月付、既有負債與每月固定支出一起看，快速判斷貸後現金流是否仍有餘裕。</p>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">總月負債支出</span>
+          <strong id="total-debt-payment">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">整體負債比</span>
+          <strong id="overall-debt-ratio">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">扣除負債後剩餘</span>
+          <strong id="income-after-debt">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">扣除固定支出後餘額</span>
+          <strong id="income-after-all-expenses">-</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Debt Consolidation</p>
+          <h2>債務整合建議器</h2>
+          <p>輸入現有多筆債務後，系統會以目前主方案作為整合貸款，估算是否值得整合、可覆蓋多少本金，以及月付與總成本變化。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="add-debt-row-button" class="ghost-button" type="button">新增債務列</button>
+          <button id="debt-sample-button" class="ghost-button" type="button">帶入債務範例</button>
+        </div>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>債務名稱</th>
+              <th>剩餘本金(萬)</th>
+              <th>年利率</th>
+              <th>月付金(元)</th>
+              <th>剩餘期數</th>
+              <th>清償費用(元)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="debt-body">
+            <tr>
+              <td colspan="7" class="empty-cell">如要評估債務整合，可新增現有卡債、信貸或車貸資料。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">整合月付變化</span>
+          <strong id="debt-consolidation-monthly-gap">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">整體成本差異</span>
+          <strong id="debt-consolidation-total-saved">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">本金覆蓋率</span>
+          <strong id="debt-consolidation-coverage">-</strong>
+        </article>
+      </div>
+
+      <p id="debt-consolidation-summary" class="status">填入多筆債務資料後，這裡會顯示債務整合建議。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>項目</th>
+              <th>整合前</th>
+              <th>整合後</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody id="debt-consolidation-body">
+            <tr>
+              <td colspan="4" class="empty-cell">完成輸入後顯示債務整合分析。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Refinance Compare</p>
+          <h2>貸款重整 / 轉貸比較</h2>
+          <p>輸入目前剩餘貸款條件與新方案，快速比對月付變化、總成本差異與大約回收期。</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="field-card">
+          <span class="field-label">目前剩餘本金</span>
+          <input id="refi-current-balance" type="number" min="0" step="0.1" placeholder="38">
+          <span class="field-hint">單位：萬</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">目前剩餘利率</span>
+          <input id="refi-current-rate" type="number" min="0" step="0.01" placeholder="4.25">
+          <span class="field-hint">單位：%</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">目前剩餘期數</span>
+          <input id="refi-current-months" type="number" min="1" step="1" placeholder="42">
+          <span class="field-hint">單位：月</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">目前寬限期</span>
+          <input id="refi-current-grace" type="number" min="0" step="1" placeholder="0">
+          <span class="field-hint">單位：月，沒有可填 0</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">提前清償成本</span>
+          <input id="refi-exit-fee" type="number" min="0" step="1000" placeholder="12000">
+          <span class="field-hint">單位：元，含違約金或塗銷等費用</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">新方案利率</span>
+          <input id="refi-new-rate" type="number" min="0" step="0.01" placeholder="2.68">
+          <span class="field-hint">單位：%</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">新方案期數</span>
+          <input id="refi-new-months" type="number" min="1" step="1" placeholder="60">
+          <span class="field-hint">單位：月</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">新方案寬限期</span>
+          <input id="refi-new-grace" type="number" min="0" step="1" placeholder="0">
+          <span class="field-hint">單位：月，沒有可填 0</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">新方案手續費</span>
+          <input id="refi-new-fee" type="number" min="0" step="1000" placeholder="3000">
+          <span class="field-hint">單位：元</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">轉貸補貼 / 回饋</span>
+          <input id="refi-cashback" type="number" min="0" step="1000" placeholder="0">
+          <span class="field-hint">單位：元，可填銀行補貼或現金回饋</span>
+        </label>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">月付差異</span>
+          <strong id="refi-monthly-gap">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">總成本節省</span>
+          <strong id="refi-total-saved">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">回收期</span>
+          <strong id="refi-break-even">-</strong>
+        </article>
+      </div>
+
+      <p id="refi-summary" class="status">填入目前貸款剩餘條件與新方案後，這裡會顯示貸款重整 / 轉貸比較。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>比較項目</th>
+              <th>目前貸款</th>
+              <th>新方案</th>
+              <th>差異判讀</th>
+            </tr>
+          </thead>
+          <tbody id="refi-compare-body">
+            <tr>
+              <td colspan="4" class="empty-cell">完成輸入後顯示轉貸比較結果。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Quick Advice</p>
+          <h2>總結建議卡</h2>
+          <p>根據 APR、手續費、利息負擔與提前清償效果，自動整理出重點判讀。</p>
+        </div>
+      </div>
+
+      <div id="advice-list" class="advice-list">
+        <article class="advice-card empty-advice">完成試算後，這裡會自動出現重點建議。</article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Dashboard Snapshot</p>
+          <h2>儀表板快照</h2>
+          <p>把本次試算濃縮成一頁摘要，方便轉貼到訊息、備忘錄或內部報告。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="copy-dashboard-snapshot-button" class="ghost-button" type="button">複製快照摘要</button>
+        </div>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">綜合健康分數</span>
+          <strong id="dashboard-health-score">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">快照標籤</span>
+          <strong id="dashboard-health-band">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">主要風險</span>
+          <strong id="dashboard-primary-risk">-</strong>
+        </article>
+      </div>
+
+      <div id="dashboard-highlight-list" class="advice-list">
+        <article class="advice-card empty-advice">完成試算後，這裡會整理摘要亮點。</article>
+      </div>
+
+      <label class="field-card field-card-span-2">
+        <span class="field-label">快照文字</span>
+        <textarea id="dashboard-snapshot-text" class="field-textarea" rows="6" readonly placeholder="完成試算後會產生可直接複製的摘要文字。"></textarea>
+        <span id="dashboard-snapshot-status" class="field-hint">完成試算後可一鍵複製。</span>
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Decision Report</p>
+          <h2>決策報告生成器</h2>
+          <p>把本次貸款條件、風險、壓力測試、債務整合與提前清償建議整理成一段可直接貼到簡報、Email 或內部簽核的報告文字。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="copy-decision-report-button" class="ghost-button" type="button">複製決策報告</button>
+        </div>
+      </div>
+
+      <textarea id="decision-report-text" class="field-textarea" rows="12" readonly placeholder="完成試算後會自動生成決策報告。"></textarea>
+      <p id="decision-report-status" class="status">完成試算後會產生決策報告。</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Prepayment Timing</p>
+          <h2>提前清償最佳時點分析</h2>
+          <p>依目前設定的提前清償金額、手續費與違約金率，模擬各候選月份的總利息節省與淨節省效果。</p>
+        </div>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">最佳提前月份</span>
+          <strong id="best-prepay-month">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">最佳淨節省</span>
+          <strong id="best-prepay-net-saved">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">最佳縮短期數</span>
+          <strong id="best-prepay-months-saved">-</strong>
+        </article>
+      </div>
+
+      <p id="best-prepay-summary" class="status">填入提前清償金額後，這裡會分析較合適的提前清償月份。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table">
+          <thead>
+            <tr>
+              <th>候選月份</th>
+              <th>節省利息(元)</th>
+              <th>提前清償費用(元)</th>
+              <th>淨節省(元)</th>
+              <th>縮短期數(月)</th>
+            </tr>
+          </thead>
+          <tbody id="prepay-timing-body">
+            <tr>
+              <td colspan="5" class="empty-cell">填入提前清償金額後顯示最佳時點分析</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">APR Estimate</p>
+          <h2>總費用年百分率概算</h2>
+          <p>APR 是「總費用年百分率」，不只看貸款名目利率，還會把開辦費、手續費與實際拿到手的金額一起納入，較能反映這筆貸款真正的年化資金成本。若兩家銀行名目利率看起來接近，APR 往往更適合拿來直接比較。</p>
+          <p>本頁做法是以實拿金額作為期初流入，將所有月付與費用後的還款現金流反推月報酬率，再年化成 APR 概算。</p>
+        </div>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">APR 概算</span>
+          <strong id="apr-estimate">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">總成本差額</span>
+          <strong id="apr-cost-gap">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">APR 說明</span>
+          <strong id="apr-summary">-</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Prepayment Compare</p>
+          <h2>提前清償比較</h2>
+          <p>比較原方案與提前清償後的總利息、總還款與剩餘期數，可切換縮短期數或降低月付兩種模式。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="prepay-mode-shorten" class="ghost-button is-active" type="button">縮短期數</button>
+          <button id="prepay-mode-reduce" class="ghost-button" type="button">降低月付</button>
+        </div>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">節省總利息</span>
+          <strong id="interest-saved">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">縮短期數</span>
+          <strong id="months-saved">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">提前清償後總還款</span>
+          <strong id="prepay-total-payment">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">提前清償費用</span>
+          <strong id="prepay-penalty-cost">-</strong>
+        </article>
+      </div>
+
+      <p id="prepay-status" class="status">如需比較，請填寫提前清償月份與金額。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table">
+          <thead>
+            <tr>
+              <th>模式</th>
+              <th>月付金(萬)</th>
+              <th>總還款(萬)</th>
+              <th>節省利息(元)</th>
+              <th>縮短期數(月)</th>
+            </tr>
+          </thead>
+          <tbody id="prepay-mode-compare-body">
+            <tr>
+              <td colspan="5" class="empty-cell">填入提前清償資料後顯示兩種模式比較</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Cost Breakdown</p>
+          <h2>總成本拆解圖</h2>
+          <p>把本金、利息與手續費拆開看，快速理解整筆貸款現金流的主要成本來源。</p>
+        </div>
+      </div>
+
+      <div class="chart-grid single-chart-grid">
+        <article class="chart-card">
+          <h3>成本結構</h3>
+          <div id="cost-breakdown-summary" class="chart-tooltip">完成試算後顯示拆解結果</div>
+          <canvas id="cost-breakdown-chart" height="240"></canvas>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Rate Sensitivity</p>
+          <h2>利率敏感度分析</h2>
+          <p>用目前貸款條件模擬利率上下波動時，月付、總利息與 APR 的變化，方便判斷升降息敏感度。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="sensitivity-sample-button" class="ghost-button" type="button">帶入預設情境</button>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="field-card">
+          <span class="field-label">利率變動步長</span>
+          <input id="sensitivity-step" type="number" min="0.01" step="0.01" placeholder="0.5">
+          <span class="field-hint">單位：%，例如 0.5</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">向下模擬組數</span>
+          <input id="sensitivity-down-count" type="number" min="0" step="1" placeholder="2">
+          <span class="field-hint">例如 2 代表 -1.0%、-0.5%</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">向上模擬組數</span>
+          <input id="sensitivity-up-count" type="number" min="0" step="1" placeholder="2">
+          <span class="field-hint">例如 2 代表 +0.5%、+1.0%</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">期數變動步長</span>
+          <input id="matrix-term-step" type="number" min="1" step="1" placeholder="12">
+          <span class="field-hint">單位：月，例如 12 代表一年</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">期數縮短組數</span>
+          <input id="matrix-term-down-count" type="number" min="0" step="1" placeholder="1">
+          <span class="field-hint">例如 1 代表少 12 期</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">期數延長組數</span>
+          <input id="matrix-term-up-count" type="number" min="0" step="1" placeholder="2">
+          <span class="field-hint">例如 2 代表多 12、24 期</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">矩陣指標</span>
+          <select id="matrix-metric-key" class="field-select">
+            <option value="monthlyPayment">月付金</option>
+            <option value="totalInterest">總利息</option>
+            <option value="aprEstimate">APR</option>
+            <option value="totalPayment">總還款</option>
+            <option value="dsr">DSR</option>
+          </select>
+          <span class="field-hint">雙軸矩陣要顯示的核心指標</span>
+        </label>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table">
+          <thead>
+            <tr>
+              <th>情境</th>
+              <th>年利率</th>
+              <th>月付金(萬)</th>
+              <th>總利息(元)</th>
+              <th>APR</th>
+            </tr>
+          </thead>
+          <tbody id="sensitivity-body">
+            <tr>
+              <td colspan="5" class="empty-cell">完成試算後顯示利率敏感度分析</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chart-grid single-chart-grid">
+        <article class="chart-card">
+          <h3>利率敏感度圖</h3>
+          <div id="sensitivity-chart-summary" class="chart-tooltip">完成試算後顯示敏感度趨勢</div>
+          <canvas id="sensitivity-chart" height="240"></canvas>
+        </article>
+      </div>
+
+      <div class="chart-grid single-chart-grid">
+        <article class="chart-card">
+          <h3>條件敏感度矩陣</h3>
+          <div id="sensitivity-matrix-summary" class="chart-tooltip">完成試算後顯示利率 x 期數雙軸矩陣</div>
+          <div class="table-wrap mobile-scroll-card matrix-wrap">
+            <table class="result-table sensitivity-matrix-table">
+              <thead id="sensitivity-matrix-head">
+                <tr>
+                  <th>利率 \\ 期數</th>
+                  <th>基準</th>
+                </tr>
+              </thead>
+              <tbody id="sensitivity-matrix-body">
+                <tr>
+                  <td colspan="2" class="empty-cell">完成試算後顯示條件敏感度矩陣</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Risk Thresholds</p>
+          <h2>風險門檻自訂</h2>
+          <p>可依你的內部審核習慣或個人承受度，自訂 DSR、整體負債比、APR 差距與手續費占比警示門檻。</p>
+        </div>
+      </div>
+
+      <div class="form-grid compact-form-grid threshold-grid">
+        <label class="field-card">
+          <span class="field-label">DSR 中風險門檻</span>
+          <input id="risk-dsr-medium" type="number" min="0" max="100" step="1" placeholder="40">
+          <span class="field-hint">月付 / 月收入，高於此值列為中風險</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">DSR 高風險門檻</span>
+          <input id="risk-dsr-high" type="number" min="0" max="100" step="1" placeholder="50">
+          <span class="field-hint">高於此值列為高風險</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">負債比中風險門檻</span>
+          <input id="risk-debt-medium" type="number" min="0" max="100" step="1" placeholder="50">
+          <span class="field-hint">總負債 / 月收入</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">負債比高風險門檻</span>
+          <input id="risk-debt-high" type="number" min="0" max="100" step="1" placeholder="60">
+          <span class="field-hint">高於此值列為高風險</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">APR 差距門檻</span>
+          <input id="risk-apr-gap" type="number" min="0" step="0.1" placeholder="1">
+          <span class="field-hint">APR 與名目利率差距超過此值列警示</span>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">手續費占比門檻</span>
+          <input id="risk-fee-ratio" type="number" min="0" step="0.1" placeholder="2">
+          <span class="field-hint">手續費 / 貸款金額，高於此值列警示</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Risk Alerts</p>
+          <h2>風險警示系統</h2>
+          <p>依目前貸款條件、收入負擔、費用結構與升息敏感度，自動整理高、中、低風險提醒。</p>
+        </div>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent">
+          <span class="metric-label">高風險警示</span>
+          <strong id="risk-high-count">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">中風險警示</span>
+          <strong id="risk-medium-count">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">風險總覽</span>
+          <strong id="risk-summary">-</strong>
+        </article>
+      </div>
+
+      <div id="risk-alert-list" class="advice-list">
+        <article class="advice-card empty-advice">完成試算後，這裡會顯示風險警示。</article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Bank Comparison</p>
+          <h2>銀行方案比較模式</h2>
+          <p>可同時比較多個貸款方案的月付、總利息、APR 與實拿金額，方便快速判斷哪一案更划算。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="add-compare-row-button" class="ghost-button" type="button">新增方案列</button>
+          <button id="remove-compare-row-button" class="ghost-button" type="button">刪除最後一列</button>
+          <button id="compare-sample-button" class="ghost-button" type="button">帶入比較範例</button>
+          <button id="export-compare-csv-button" class="ghost-button" type="button">匯出比較 CSV</button>
+          <button id="export-compare-pdf-button" class="ghost-button" type="button">匯出比較 PDF</button>
+        </div>
+      </div>
+
+      <div class="form-grid compact-form-grid">
+        <label class="field-card">
+          <span class="field-label">排序欄位</span>
+          <select id="compare-sort-key" class="field-select">
+            <option value="score">綜合優勢</option>
+            <option value="aprEstimate">APR</option>
+            <option value="monthlyPayment">月付金</option>
+            <option value="totalInterest">總利息</option>
+            <option value="totalPayment">總還款</option>
+            <option value="netAmount">實拿金額</option>
+            <option value="annualRate">名目利率</option>
+            <option value="months">期數</option>
+            <option value="handlingFee">手續費</option>
+          </select>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">排序方向</span>
+          <select id="compare-sort-direction" class="field-select">
+            <option value="auto">智慧排序</option>
+            <option value="asc">由低到高</option>
+            <option value="desc">由高到低</option>
+          </select>
+        </label>
+      </div>
+
+      <p id="compare-sort-summary" class="status">排序器會依你指定的欄位重新排列貸款方案。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>方案名稱</th>
+              <th>貸款金額(萬)</th>
+              <th>年利率</th>
+              <th>期數</th>
+              <th>手續費(元)</th>
+              <th>寬限期</th>
+            </tr>
+          </thead>
+          <tbody id="compare-input-body">
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-result-table">
+          <thead>
+            <tr>
+              <th>排序</th>
+              <th>方案</th>
+              <th>月付金(萬)</th>
+              <th>總還款(萬)</th>
+              <th>總利息(元)</th>
+              <th>實拿金額(萬)</th>
+              <th>APR</th>
+              <th>判讀</th>
+            </tr>
+          </thead>
+          <tbody id="compare-result-body">
+            <tr>
+              <td colspan="7" class="empty-cell">填入比較資料後會顯示方案比較結果</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Condition Diff</p>
+          <h2>貸款條件差異分析</h2>
+          <p>以目前主方案對照比較區排名第 1 的方案，快速看出關鍵條件與成本差異。</p>
+        </div>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">對照方案</span>
+          <strong id="diff-target-name">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">APR 差異</span>
+          <strong id="diff-apr-gap">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">月付差異</span>
+          <strong id="diff-monthly-gap">-</strong>
+        </article>
+      </div>
+
+      <p id="diff-analysis-summary" class="status">填入比較資料後，這裡會顯示主方案與最佳對照方案的差異分析。</p>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>比較項目</th>
+              <th>目前主方案</th>
+              <th>對照方案</th>
+              <th>差異說明</th>
+            </tr>
+          </thead>
+          <tbody id="diff-analysis-body">
+            <tr>
+              <td colspan="4" class="empty-cell">填入比較資料後顯示貸款條件差異分析</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Rate Batch</p>
+          <h2>利率情境批次比較</h2>
+          <p>輸入多組年利率，一次比較不同利率情境下的月付、總利息、APR 與相對基準差異。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="rate-batch-sample-button" class="ghost-button" type="button">帶入批次範例</button>
+        </div>
+      </div>
+
+      <div class="form-grid compact-form-grid">
+        <label class="field-card field-card-span-2">
+          <span class="field-label">利率批次清單</span>
+          <textarea id="rate-batch-input" class="field-textarea" rows="4" placeholder="2.35, 2.88, 3.15, 3.75"></textarea>
+          <span class="field-hint">可用逗號、空白或換行分隔；單位是年利率 %</span>
+        </label>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">最佳批次利率</span>
+          <strong id="rate-batch-best-rate">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">最差批次月付</span>
+          <strong id="rate-batch-worst-payment">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">批次比較摘要</span>
+          <strong id="rate-batch-summary">-</strong>
+        </article>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table compare-input-table">
+          <thead>
+            <tr>
+              <th>情境</th>
+              <th>年利率</th>
+              <th>月付金(萬)</th>
+              <th>總利息(元)</th>
+              <th>APR</th>
+              <th>月付差異</th>
+              <th>利息差異</th>
+              <th>風險標記</th>
+            </tr>
+          </thead>
+          <tbody id="rate-batch-body">
+            <tr>
+              <td colspan="8" class="empty-cell">輸入利率批次後顯示情境比較</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <template id="compare-row-template">
+      <tr>
+        <td data-label="方案名稱"><input class="compare-input compare-name" type="text"></td>
+        <td data-label="貸款金額(萬)"><input class="compare-input compare-loan" type="number" min="0.01" step="0.1"></td>
+        <td data-label="年利率"><input class="compare-input compare-rate" type="number" min="0" step="0.01"></td>
+        <td data-label="期數"><input class="compare-input compare-months" type="number" min="1" step="1"></td>
+        <td data-label="手續費(元)"><input class="compare-input compare-fee" type="number" min="0" step="100"></td>
+        <td data-label="寬限期"><input class="compare-input compare-grace" type="number" min="0" step="1"></td>
+      </tr>
+    </template>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Visual Summary</p>
+          <h2>還款趨勢圖</h2>
+          <p>快速查看月付金、利息與剩餘本金變化，也能對比提前清償後的剩餘本金下降速度。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="chart-mode-monthly" class="ghost-button is-active" type="button">月度模式</button>
+          <button id="chart-mode-yearly" class="ghost-button" type="button">年度匯總</button>
+          <button id="download-payment-chart-button" class="ghost-button" type="button">下載月付圖 PNG</button>
+          <button id="download-balance-chart-button" class="ghost-button" type="button">下載本金圖 PNG</button>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <article class="chart-card">
+          <h3>月付金與利息</h3>
+          <div class="button-row compact-row">
+            <button id="payment-view-payment-interest" class="ghost-button is-active" type="button">月付+利息</button>
+            <button id="payment-view-principal-interest" class="ghost-button" type="button">本金+利息</button>
+            <button id="payment-view-total-payment" class="ghost-button" type="button">含額外清償</button>
+          </div>
+          <div id="payment-chart-tooltip" class="chart-tooltip">滑動到圖表上查看明細</div>
+          <canvas id="payment-chart" height="240"></canvas>
+        </article>
+
+        <article class="chart-card">
+          <h3>剩餘本金變化</h3>
+          <div class="button-row compact-row">
+            <button id="balance-view-remaining" class="ghost-button is-active" type="button">剩餘本金</button>
+            <button id="balance-view-cumulative-principal" class="ghost-button" type="button">累積已還本金</button>
+            <button id="balance-view-cumulative-interest" class="ghost-button" type="button">累積已付利息</button>
+          </div>
+          <div id="balance-chart-tooltip" class="chart-tooltip">滑動到圖表上查看明細</div>
+          <canvas id="balance-chart" height="240"></canvas>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Annual Summary</p>
+          <h2>年度統計表</h2>
+          <p>依每 12 期彙總年度還款、本金、利息與年末剩餘本金，方便做年度檢視與匯出。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="export-annual-base-button" class="ghost-button" type="button">匯出原方案年度 CSV</button>
+          <button id="export-annual-prepay-button" class="ghost-button" type="button">匯出提前清償年度 CSV</button>
+        </div>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>年度</th>
+              <th>平均年利率</th>
+              <th>年度還款(萬)</th>
+              <th>年度本金(萬)</th>
+              <th>年度利息(元)</th>
+              <th>年度額外清償(萬)</th>
+              <th>年度提前清償費用(元)</th>
+              <th>年末剩餘本金(萬)</th>
+            </tr>
+          </thead>
+          <tbody id="annual-summary-body">
+            <tr>
+              <td colspan="8" class="empty-cell">尚未產生年度統計</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>年度</th>
+              <th>平均年利率</th>
+              <th>年度還款(萬)</th>
+              <th>年度本金(萬)</th>
+              <th>年度利息(元)</th>
+              <th>年度額外清償(萬)</th>
+              <th>年度提前清償費用(元)</th>
+              <th>年末剩餘本金(萬)</th>
+            </tr>
+          </thead>
+          <tbody id="annual-prepay-summary-body">
+            <tr>
+              <td colspan="8" class="empty-cell">尚未設定提前清償年度統計</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Amortization Schedule</p>
+          <h2>原方案月攤還明細</h2>
+          <p>可匯出 CSV，方便貼到 Excel 或 Google Sheets 分析。</p>
+        </div>
+
+        <div class="button-row">
+          <button id="export-base-button" class="ghost-button" type="button">匯出原方案 CSV</button>
+          <button id="export-prepay-button" class="ghost-button" type="button">匯出提前清償 CSV</button>
+        </div>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>期數</th>
+              <th>日期</th>
+              <th>年利率</th>
+              <th>月付金(萬)</th>
+              <th>本金(萬)</th>
+              <th>利息(元)</th>
+              <th>額外清償(萬)</th>
+              <th>提前清償費用(元)</th>
+              <th>剩餘本金(萬)</th>
+            </tr>
+          </thead>
+          <tbody id="schedule-body">
+            <tr>
+              <td colspan="9" class="empty-cell">尚未產生試算結果</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Prepayment Schedule</p>
+          <h2>提前清償後明細</h2>
+          <p>若有設定提前清償，這裡會列出新的還款路徑。</p>
+        </div>
+      </div>
+
+      <div class="table-wrap mobile-scroll-card">
+        <table class="result-table mobile-stack-table">
+          <thead>
+            <tr>
+              <th>期數</th>
+              <th>日期</th>
+              <th>年利率</th>
+              <th>月付金(萬)</th>
+              <th>本金(萬)</th>
+              <th>利息(元)</th>
+              <th>額外清償(萬)</th>
+              <th>提前清償費用(元)</th>
+              <th>剩餘本金(萬)</th>
+            </tr>
+          </thead>
+          <tbody id="prepay-schedule-body">
+            <tr>
+              <td colspan="9" class="empty-cell">尚未設定提前清償比較</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Calendar View</p>
+          <h2>實際月曆式還款表</h2>
+          <p>依實際年月分組查看每月還款內容，並可依年度篩選、依重點欄位排序，以及查看提前清償前後的月份差異。</p>
+        </div>
+      </div>
+
+      <div class="form-grid compact-form-grid">
+        <label class="field-card">
+          <span class="field-label">月曆年份篩選</span>
+          <select id="calendar-year-filter" class="field-select">
+            <option value="all">全部年份</option>
+          </select>
+        </label>
+
+        <label class="field-card">
+          <span class="field-label">月卡片排序</span>
+          <select id="calendar-sort-key" class="field-select">
+            <option value="chronological">依時間先後</option>
+            <option value="cashOutflow">依當月總支出</option>
+            <option value="interest">依當月利息</option>
+            <option value="remainingBalance">依月末剩餘本金</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="metrics single-row">
+        <article class="metric-card accent-secondary">
+          <span class="metric-label">月曆最高支出月份</span>
+          <strong id="calendar-peak-month">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">最高單月總支出</span>
+          <strong id="calendar-peak-payment">-</strong>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">月曆重點摘要</span>
+          <strong id="calendar-summary">-</strong>
+        </article>
+      </div>
+
+      <div class="chart-grid">
+        <article class="chart-card">
+          <h3>原方案月曆檢視</h3>
+          <div id="calendar-base-view" class="calendar-grid">
+            <article class="advice-card empty-advice">完成試算後，這裡會顯示原方案的月曆式還款表。</article>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <h3>提前清償月曆檢視</h3>
+          <div id="calendar-prepay-view" class="calendar-grid">
+            <article class="advice-card empty-advice">若有設定提前清償，這裡會顯示提前清償後的月曆式還款表。</article>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <template id="rate-tier-row-template">
+    <tr>
+      <td><input class="tier-input tier-start" type="number" min="1" step="1" placeholder="13"></td>
+      <td><input class="tier-input tier-end" type="number" min="1" step="1" placeholder="60"></td>
+      <td><input class="tier-input tier-rate" type="number" min="0" step="0.01" placeholder="3.35"></td>
+      <td><button class="ghost-button tier-remove-button" type="button">刪除</button></td>
+    </tr>
+  </template>
+
+  <template id="extra-prepay-row-template">
+    <tr>
+      <td data-label="月份"><input class="compare-input extra-prepay-month" type="number" min="1" step="1" placeholder="24"></td>
+      <td data-label="金額(萬)"><input class="compare-input extra-prepay-amount" type="number" min="0" step="0.1" placeholder="5"></td>
+      <td data-label="手續費(元)"><input class="compare-input extra-prepay-fee" type="number" min="0" step="100" placeholder="0"></td>
+      <td data-label="違約金率(%)"><input class="compare-input extra-prepay-penalty" type="number" min="0" step="0.01" placeholder="0"></td>
+      <td data-label="操作"><button class="ghost-button extra-prepay-remove-button" type="button">刪除</button></td>
+    </tr>
+  </template>
+
+  <template id="debt-row-template">
+    <tr>
+      <td data-label="債務名稱"><input class="compare-input debt-name" type="text" placeholder="信用卡分期"></td>
+      <td data-label="剩餘本金(萬)"><input class="compare-input debt-balance" type="number" min="0.1" step="0.1" placeholder="8"></td>
+      <td data-label="年利率"><input class="compare-input debt-rate" type="number" min="0" step="0.01" placeholder="14.5"></td>
+      <td data-label="月付金(元)"><input class="compare-input debt-payment" type="number" min="0" step="100" placeholder="6500"></td>
+      <td data-label="剩餘期數"><input class="compare-input debt-months" type="number" min="1" step="1" placeholder="24"></td>
+      <td data-label="清償費用(元)"><input class="compare-input debt-fee" type="number" min="0" step="100" placeholder="0"></td>
+      <td data-label="操作"><button class="ghost-button debt-remove-button" type="button">刪除</button></td>
+    </tr>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>

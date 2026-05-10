@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LedgerFlow Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/echarts.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="side-nav">
+      <div class="side-nav-brand">
+        <p class="side-nav-kicker">LedgerFlow</p>
+        <h2>Planner</h2>
+      </div>
+      <nav class="side-nav-menu" aria-label="主要導覽">
+        <a href="#top" class="side-nav-link">總覽</a>
+        <a href="#planner-panel" class="side-nav-link">規劃工作台</a>
+        <a href="#income-expense-section" class="side-nav-link">收支</a>
+        <a href="#budget-section" class="side-nav-link">預算</a>
+        <a href="#goal-section" class="side-nav-link">目標</a>
+        <a href="#model-panel" class="side-nav-link">資料模型</a>
+      </nav>
+    </aside>
+
+    <main class="page" id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">LedgerFlow Planner</p>
+        <h1>把資產、負債、現金流與質押風險放進同一個決策面板。</h1>
+        <p class="subtitle">
+          這不是單純記帳頁，而是一個面向個人財務決策的工作台。你可以在同一頁面追蹤淨值、負債壓力、12 個月現金流、債務還款策略與股票質押警戒風險。
+        </p>
+        <div class="hero-actions">
+          <span class="hero-chip">淨值總覽</span>
+          <span class="hero-chip">還款策略</span>
+          <span class="hero-chip">質押風險</span>
+          <button type="button" class="hero-chip hero-chip-button" id="help-button">Help / Guide</button>
+        </div>
+      </div>
+
+      <aside class="hero-panel">
+        <div class="hero-panel-block">
+          <span class="hero-panel-label">產品定位</span>
+          <strong>Personal Balance Sheet OS</strong>
+          <p>給有房貸、信貸、股票質押與多筆資產配置需求的個人使用。</p>
+        </div>
+        <div class="hero-panel-block">
+          <span class="hero-panel-label">核心能力</span>
+          <div class="hero-pill-list">
+            <span class="hero-pill">資產負債總表</span>
+            <span class="hero-pill">12 個月現金流</span>
+            <span class="hero-pill">債務雪球 / 雪崩</span>
+            <span class="hero-pill">本機保存</span>
+          </div>
+        </div>
+        <div class="hero-panel-block">
+          <span class="hero-panel-label">下一步建議</span>
+          <p id="hero-next-step">先完成資產、負債與現金流三項核心資料。</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="onboarding-banner" id="onboarding-banner" aria-label="Onboarding">
+      <div>
+        <strong id="onboarding-step">Step 1</strong>
+        <p id="onboarding-detail">先新增至少一筆資產，建立財務盤點起點。</p>
+      </div>
+      <div id="onboarding-quick-actions" class="quick-action-row" aria-label="快速動作"></div>
+    </section>
+
+    <section class="control-bar" aria-label="模板">
+      <div class="control-copy">
+        <strong>快速建立第一個計畫</strong>
+        <p>選擇新手、投資型或保守型模板，快速套用初始配置。</p>
+      </div>
+      <div class="control-actions" id="template-buttons">
+        <button type="button" class="ghost-button" data-template="beginner">新手</button>
+        <button type="button" class="ghost-button" data-template="investor">投資型</button>
+        <button type="button" class="ghost-button" data-template="conservative">保守型</button>
+      </div>
+    </section>
+
+    <section class="insight-strip" aria-label="風險概覽與建議動作">
+      <article class="insight-card insight-risk">
+        <span class="insight-label">風險概覽</span>
+        <strong id="hero-risk-headline">目前風險可控</strong>
+        <p id="hero-risk-detail">系統會根據現金流、槓桿與股票質押維持率更新這裡的摘要。</p>
+      </article>
+      <article class="insight-card insight-action">
+        <span class="insight-label">建議動作</span>
+        <strong id="hero-action-headline">先完成資料校準</strong>
+        <p id="hero-action-detail">優先補齊每筆負債的利率、月付與剩餘期數，再看還款順序。</p>
+      </article>
+      <article class="insight-card insight-focus">
+        <span class="insight-label">本週重點</span>
+        <strong id="hero-focus-headline">追蹤現金缺口與質押緩衝</strong>
+        <p id="hero-focus-detail">如果 12 個月現金預估轉負，或質押緩衝過低，應優先處理。</p>
+      </article>
+    </section>
+
+    <section class="summary-grid" aria-label="摘要卡">
+      <article class="summary-card">
+        <span class="summary-label">總資產</span>
+        <strong id="total-assets">NT$ 0</strong>
+        <p>之後由資產清單自動彙總。</p>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">總負債</span>
+        <strong id="total-liabilities">NT$ 0</strong>
+        <p>之後會納入房貸、信貸、股票質押與其他負債。</p>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">淨值</span>
+        <strong id="net-worth">NT$ 0</strong>
+        <p>作為資產負債總表主指標。</p>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">月自由現金流</span>
+        <strong id="free-cash-flow">NT$ 0</strong>
+        <p>由收入與支出規劃自動試算。</p>
+      </article>
+    </section>
+
+    <section class="control-bar" aria-label="操作列">
+      <div class="control-copy">
+        <strong>資料會自動保存在本機瀏覽器</strong>
+        <p id="save-status">目前使用預設資料。</p>
+        <p id="backup-status">建議定期匯出 JSON 備份。</p>
+      </div>
+      <div class="control-actions">
+        <button type="button" class="ghost-button" id="export-button">匯出 JSON</button>
+        <label class="ghost-button file-trigger" for="import-file">匯入 JSON</label>
+        <input type="file" id="import-file" accept="application/json" hidden>
+        <button type="button" class="ghost-button" id="reset-button">重設為預設值</button>
+      </div>
+    </section>
+
+    <section class="validation-panel" aria-label="資料檢查">
+      <div class="task-panel-heading">
+        <div>
+          <p class="section-kicker">Validation</p>
+          <h2>資料檢查</h2>
+          <p id="validation-summary">集中檢查核心資料完整度。</p>
+        </div>
+        <span class="panel-tag">即時提示</span>
+      </div>
+      <div id="validation-list" class="validation-list" aria-live="polite"></div>
+    </section>
+
+    <section class="surface" aria-label="ECharts 圖表系統">
+      <div class="surface-heading">
+        <div>
+          <h3>ECharts 圖表系統</h3>
+          <p class="surface-subtitle">依目前資產、負債與現金流資料自動更新。</p>
+        </div>
+        <span class="surface-pill">ECharts</span>
+      </div>
+      <div class="echarts-grid">
+        <section class="mini-chart-panel">
+          <div class="chart-heading">
+            <h4>淨資產趨勢</h4>
+            <span>assets - liabilities</span>
+          </div>
+          <div id="chart-networth" class="echart-container"></div>
+        </section>
+        <section class="mini-chart-panel">
+          <div class="chart-heading">
+            <h4>現金流</h4>
+            <span>income / expense</span>
+          </div>
+          <div id="chart-cashflow" class="echart-container"></div>
+        </section>
+        <section class="mini-chart-panel">
+          <div class="chart-heading">
+            <h4>資產配置</h4>
+            <span>group by type</span>
+          </div>
+          <div id="chart-asset" class="echart-container"></div>
+        </section>
+        <section class="mini-chart-panel">
+          <div class="chart-heading">
+            <h4>負債結構</h4>
+            <span>balance by type</span>
+          </div>
+          <div id="chart-debt" class="echart-container"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <article class="panel">
+        <button type="button" class="panel-heading panel-toggle" data-panel-toggle="model-panel" aria-expanded="true">
+          <div>
+            <p class="section-kicker">Step 2</p>
+            <h2>資料模型</h2>
+          </div>
+          <span class="panel-tag">前端狀態結構</span>
+        </button>
+        <div class="panel-body" id="model-panel">
+          <div class="model-grid" id="model-grid" aria-live="polite"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <button type="button" class="panel-heading panel-toggle" data-panel-toggle="planner-panel" aria-expanded="true">
+          <div>
+            <p class="section-kicker">Step 3</p>
+            <h2>財務管理工作台</h2>
+          </div>
+          <span class="panel-tag">完整功能</span>
+        </button>
+        <div class="panel-body" id="planner-panel">
+
+        <div class="layout-grid">
+          <section class="surface">
+            <div class="surface-heading">
+              <div>
+                <h3>資產負債總表</h3>
+                <p class="surface-subtitle">集中管理資產、負債與股票質押風險。</p>
+              </div>
+              <span class="surface-pill">Assets / Liabilities</span>
+            </div>
+            <div class="subsection">
+              <div id="asset-guide" class="guide-message" hidden></div>
+              <div class="subsection-heading">
+                <h4>資產資料</h4>
+                <p>建議優先填可快速變現的資產，再補長期資產；支援現金、股票、基金、ETF、保單、外幣與加密資產等類型。</p>
+              </div>
+              <div class="list-shell" id="asset-section">
+              <div class="list-heading">
+                <h4>資產清單</h4>
+                <button type="button" class="ghost-button small-button" id="add-asset-button">新增資產</button>
+              </div>
+              <div id="asset-list" class="stack-list" aria-label="資產清單"></div>
+            </div>
+            </div>
+
+            <div class="subsection" id="income-expense-section">
+              <div id="debt-guide" class="guide-message" hidden></div>
+              <div class="subsection-heading">
+                <h4>負債資料</h4>
+                <p>每筆負債至少補齊餘額、利率、最低月付與剩餘期數；支援房貸、信貸、信用卡分期、車貸、學貸與股票質押等類型。</p>
+              </div>
+              <div class="list-shell" id="debt-section">
+              <div class="list-heading">
+                <h4>負債清單</h4>
+                <button type="button" class="ghost-button small-button" id="add-debt-button">新增負債</button>
+              </div>
+              <div id="debt-list" class="stack-list" aria-label="負債清單"></div>
+            </div>
+            </div>
+
+            <div class="subsection" id="cashflow-section">
+              <div id="cashflow-guide" class="guide-message" hidden></div>
+              <div class="subsection-heading">
+                <h4>股票質押設定</h4>
+                <p>填入目前可質押部位與券商警戒門檻，用來觀察價格波動時的維持率壓力。</p>
+              </div>
+              <form class="field-grid compact-grid" aria-label="股票質押設定">
+              <label class="field">
+                <span>質押股票市值</span>
+                <small>輸入目前可作為質押擔保的股票市值，若有折扣率可先填折算後金額。</small>
+                <input type="number" id="input-pledge-market-value" placeholder="1400000">
+              </label>
+              <label class="field">
+                <span>警戒維持率 (%)</span>
+                <small>常見如 130% 或 140%。若低於此數值，通常代表需補擔保品或還款。</small>
+                <input type="number" id="input-pledge-warning-ratio" placeholder="130">
+              </label>
+            </form>
+            </div>
+            <div class="result-box" id="forecast-section">
+              <div class="subsection-heading">
+                <h4>資產總覽儀表板</h4>
+                <p>整合資產、負債與現金流，即時計算淨資產與現金覆蓋月數。</p>
+              </div>
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>資產總額</span>
+                  <strong id="net-worth-dashboard-assets">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>負債總額</span>
+                  <strong id="net-worth-dashboard-liabilities">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>月淨現金流</span>
+                  <strong id="net-worth-dashboard-cashflow">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>現金覆蓋月數</span>
+                  <strong id="net-worth-dashboard-coverage">0.0 月</strong>
+                </article>
+              </div>
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>負債比</span>
+                  <strong id="liability-ratio">0%</strong>
+                </article>
+                <article class="result-metric">
+                  <span>流動資產占比</span>
+                  <strong id="liquid-asset-ratio">0%</strong>
+                </article>
+                <article class="result-metric">
+                  <span>槓桿倍數</span>
+                  <strong id="leverage-ratio">0x</strong>
+                </article>
+              </div>
+              <div class="result-metric-grid pledge-grid">
+                <article class="result-metric">
+                  <span>股票質押維持率</span>
+                  <strong id="pledge-maintenance-ratio">0%</strong>
+                </article>
+                <article class="result-metric">
+                  <span>距離警戒線</span>
+                  <strong id="pledge-buffer-ratio">0%</strong>
+                </article>
+                <article class="result-metric">
+                  <span>風險狀態</span>
+                  <strong id="pledge-risk-level">穩定</strong>
+                </article>
+              </div>
+              <p class="strategy-note" id="pledge-risk-note"></p>
+              <div class="forecast-table-wrap">
+                <table class="forecast-table">
+                  <thead>
+                    <tr>
+                      <th>跌幅</th>
+                      <th>維持率</th>
+                      <th>狀態</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pledge-stress-table-body"></tbody>
+                </table>
+              </div>
+              <div class="mini-chart-panel">
+                <div class="chart-heading">
+                  <h4>資產 / 負債結構</h4>
+                  <span>依金額比例顯示</span>
+                </div>
+                <div id="balance-structure-chart" class="bar-chart"></div>
+              </div>
+              <div class="subtotals-grid">
+                <section class="mini-chart-panel">
+                  <div class="chart-heading">
+                    <h4>資產分類小計</h4>
+                    <span>依類型彙總</span>
+                  </div>
+                  <div id="asset-category-summary" class="bar-chart"></div>
+                  <div id="asset-category-chart" class="bar-chart"></div>
+                </section>
+                <section class="mini-chart-panel">
+                  <div class="chart-heading">
+                    <h4>負債分類小計</h4>
+                    <span>依類型彙總</span>
+                  </div>
+                  <div id="debt-category-summary" class="bar-chart"></div>
+                  <div id="debt-category-chart" class="bar-chart"></div>
+                </section>
+              </div>
+              <div class="mini-chart-panel">
+                <div class="chart-heading">
+                  <h4>投資追蹤</h4>
+                  <span>多資產報酬率與配置</span>
+                </div>
+                <div class="result-metric-grid">
+                  <article class="result-metric">
+                    <span>投資市值</span>
+                    <strong id="investment-market-value">NT$ 0</strong>
+                  </article>
+                  <article class="result-metric">
+                    <span>未實現損益</span>
+                    <strong id="investment-gain-loss">NT$ 0</strong>
+                  </article>
+                  <article class="result-metric">
+                    <span>總報酬率</span>
+                    <strong id="investment-return-rate">0%</strong>
+                  </article>
+                </div>
+                <div id="investment-allocation-chart" class="bar-chart"></div>
+                <div class="forecast-table-wrap">
+                  <table class="forecast-table">
+                    <thead>
+                      <tr>
+                        <th>資產</th>
+                        <th>市值</th>
+                        <th>成本</th>
+                        <th>報酬率</th>
+                        <th>配置</th>
+                      </tr>
+                    </thead>
+                    <tbody id="investment-table-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div class="surface-heading">
+              <div>
+                <h3>未來現金流規劃</h3>
+                <p class="surface-subtitle">把固定收入、固定支出與大額事件放進同一張預估表。</p>
+              </div>
+              <span class="surface-pill">12M Forecast</span>
+            </div>
+            <div class="subsection">
+              <div class="subsection-heading">
+                <h4>每月現金流設定</h4>
+                <p>以保守口徑填寫固定收入與固定支出，避免把不穩定收入高估成常態。</p>
+              </div>
+            <form class="field-grid" aria-label="未來現金流規劃區">
+              <label class="field">
+                <span>每月薪資收入</span>
+                <small>填稅後或實際可支配金額較實用，若有浮動獎金建議不要全數算入。</small>
+                <input type="number" id="input-salary-income" placeholder="95000">
+              </label>
+              <label class="field">
+                <span>被動收入</span>
+                <small>例如租金、股息、利息、接案淨收入。只填穩定可持續的平均值。</small>
+                <input type="number" id="input-passive-income" placeholder="12000">
+              </label>
+              <label class="field">
+                <span>固定生活支出</span>
+                <small>例如房租、伙食、交通、保險、家庭支出，不含債務月付。</small>
+                <input type="number" id="input-monthly-expense" placeholder="38000">
+              </label>
+              <label class="field">
+                <span>每月債務還款</span>
+                <small>可先填所有負債最低應繳總額，之後再與債務清單交叉檢查。</small>
+                <input type="number" id="input-debt-payment" placeholder="56000">
+              </label>
+              <label class="field">
+                <span>期初現金</span>
+                <small>建議填活存、可隨時動用帳戶餘額，不含需解約或需賣出的資產。</small>
+                <input type="number" id="input-starting-cash" placeholder="300000">
+              </label>
+            </form>
+            </div>
+            <div class="subsection">
+              <div class="subsection-heading">
+                <h4>一次性事件</h4>
+                <p>把不會每月固定發生、但會明顯影響現金水位的事件提前放進模擬。</p>
+              </div>
+              <div class="list-shell compact-grid">
+                <div class="list-heading">
+                  <h4>事件清單</h4>
+                  <button type="button" class="ghost-button small-button" id="add-event-button">新增事件</button>
+                </div>
+                <div id="event-list" class="stack-list" aria-label="一次性事件清單"></div>
+              </div>
+              <form class="field-grid compact-grid">
+                <label class="field field-wide">
+                  <span>未來事件備註</span>
+                  <small>可記錄事件背景、估算依據或提醒自己之後要補強的月份。</small>
+                  <input type="text" id="input-event-note" placeholder="例如：8 月保費、12 月年終、3 月繳稅">
+                </label>
+              </form>
+            </div>
+            <div class="subsection">
+              <div class="subsection-heading">
+                <h4>收支追蹤</h4>
+                <p>按月份與分類記錄收入 / 支出，提供每月統計、分類小計與趨勢分析。</p>
+              </div>
+              <form class="field-grid compact-grid" aria-label="收支追蹤月份">
+                <label class="field">
+                  <span>統計月份</span>
+                  <small>選擇要檢視的月份；交易清單仍會保留所有月份資料。</small>
+                  <input type="month" id="income-expense-month" value="2026-05">
+                </label>
+              </form>
+              <div class="list-shell compact-grid">
+                <div class="list-heading">
+                  <h4>收支明細</h4>
+                  <button type="button" class="ghost-button small-button" id="add-transaction-button">新增收支</button>
+                </div>
+                <div id="transaction-list" class="stack-list" aria-label="收支明細"></div>
+              </div>
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>本月收入</span>
+                  <strong id="income-expense-income">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>本月支出</span>
+                  <strong id="income-expense-expense">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>本月結餘</span>
+                  <strong id="income-expense-net-flow">NT$ 0</strong>
+                </article>
+              </div>
+              <div class="subtotals-grid">
+                <section class="mini-chart-panel">
+                  <div class="chart-heading">
+                    <h4>支出分類</h4>
+                    <span>依本月金額排序</span>
+                  </div>
+                  <div id="expense-category-chart" class="bar-chart"></div>
+                </section>
+                <section class="mini-chart-panel">
+                  <div class="chart-heading">
+                    <h4>月趨勢</h4>
+                    <span>收入減支出</span>
+                  </div>
+                  <div id="income-expense-trend-chart" class="bar-chart"></div>
+                </section>
+              </div>
+            </div>
+            <div class="subsection" id="budget-section">
+              <div id="budget-guide" class="guide-message" hidden></div>
+              <div class="subsection-heading">
+                <h4>預算管理</h4>
+                <p>設定每類支出上限，依本月收支明細即時計算剩餘預算與超支提醒。</p>
+              </div>
+              <div class="list-shell compact-grid">
+                <div class="list-heading">
+                  <h4>分類預算</h4>
+                  <button type="button" class="ghost-button small-button" id="add-budget-button">新增預算</button>
+                </div>
+                <div id="budget-list" class="stack-list" aria-label="分類預算"></div>
+              </div>
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>預算上限</span>
+                  <strong id="budget-limit-total">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>已使用</span>
+                  <strong id="budget-spent-total">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>剩餘預算</span>
+                  <strong id="budget-remaining-total">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>超支提醒</span>
+                  <strong id="budget-over-alert">0 類</strong>
+                </article>
+              </div>
+            </div>
+            <div class="subsection" id="goal-section">
+              <div id="goal-guide" class="guide-message" hidden></div>
+              <div class="subsection-heading">
+                <h4>財務目標</h4>
+                <p>設定目標金額與時間，自動計算每月需投入與現金流缺口。</p>
+              </div>
+              <form class="field-grid" aria-label="財務目標">
+                <label class="field">
+                  <span>目標名稱</span>
+                  <small>例如緊急預備金、頭期款、旅遊基金。</small>
+                  <input type="text" id="input-goal-name" placeholder="緊急預備金">
+                </label>
+                <label class="field">
+                  <span>目標金額</span>
+                  <small>要達成的總金額。</small>
+                  <input type="number" id="input-goal-target-amount" placeholder="600000">
+                </label>
+                <label class="field">
+                  <span>目前已準備</span>
+                  <small>已投入或已存下的金額。</small>
+                  <input type="number" id="input-goal-current-amount" placeholder="180000">
+                </label>
+                <label class="field">
+                  <span>剩餘時間（月）</span>
+                  <small>系統會用剩餘金額除以月份計算每月需求。</small>
+                  <input type="number" id="input-goal-months" placeholder="18">
+                </label>
+              </form>
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>每月需投入</span>
+                  <strong id="goal-required-monthly">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>完成進度</span>
+                  <strong id="goal-progress">0%</strong>
+                </article>
+                <article class="result-metric">
+                  <span>每月缺口</span>
+                  <strong id="goal-funding-gap">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>目標狀態</span>
+                  <strong id="goal-status">可達成</strong>
+                </article>
+              </div>
+              <div class="subsection">
+                <div class="subsection-heading">
+                  <h4>FIRE / 退休規劃</h4>
+                  <p>用年支出與提領率估算財務自由目標。</p>
+                </div>
+                <form class="field-grid compact-grid" aria-label="FIRE 規劃">
+                  <label class="field">
+                    <span>提領率 (%)</span>
+                    <small>常見用 4% 作為粗估起點。</small>
+                    <input type="number" id="input-fire-withdrawal-rate" placeholder="4">
+                  </label>
+                </form>
+                <div class="result-metric-grid">
+                  <article class="result-metric">
+                    <span>FI 目標資產</span>
+                    <strong id="fire-target-portfolio">NT$ 0</strong>
+                  </article>
+                  <article class="result-metric">
+                    <span>完成進度</span>
+                    <strong id="fire-progress">0%</strong>
+                  </article>
+                  <article class="result-metric">
+                    <span>預估月數</span>
+                    <strong id="fire-months">0 個月</strong>
+                  </article>
+                </div>
+              </div>
+            </div>
+            <div class="result-box" id="risk-section">
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>月淨流入</span>
+                  <strong id="monthly-net-flow">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>最低現金餘額</span>
+                  <strong id="lowest-cash-balance">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>是否出現缺口</span>
+                  <strong id="cash-gap-flag">否</strong>
+                </article>
+                <article class="result-metric">
+                  <span>首次缺口月份</span>
+                  <strong id="forecast-deficit-month">-</strong>
+                </article>
+                <article class="result-metric">
+                  <span>最大資金缺口</span>
+                  <strong id="forecast-deficit-amount">NT$ 0</strong>
+                </article>
+              </div>
+              <div class="forecast-table-wrap">
+                <table class="forecast-table">
+                  <thead>
+                    <tr>
+                      <th>月份</th>
+                      <th>淨現金流</th>
+                      <th>期末現金</th>
+                      <th>期末淨值</th>
+                    </tr>
+                  </thead>
+                  <tbody id="forecast-table-body"></tbody>
+                </table>
+              </div>
+              <div class="mini-chart-panel">
+                <div class="chart-heading">
+                  <h4>12 個月現金走勢</h4>
+                  <span>以期末現金為主</span>
+                </div>
+                <div id="cashflow-chart" class="spark-chart"></div>
+              </div>
+              <div class="mini-chart-panel">
+                <div class="chart-heading">
+                  <h4>12 個月淨值走勢</h4>
+                  <span>與現金流同步觀察</span>
+                </div>
+                <div id="net-worth-chart" class="spark-chart"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface">
+            <div class="surface-heading">
+              <div>
+                <h3>債務還款規劃</h3>
+                <p class="surface-subtitle">比較雪球法與雪崩法，並納入分期月付估算。</p>
+              </div>
+              <span class="surface-pill">Snowball / Avalanche</span>
+            </div>
+            <div class="subsection">
+              <div class="subsection-heading">
+                <h4>策略設定</h4>
+                <p>先定義每月可額外拿去還債的預算，再比較雪球法與雪崩法的差異。</p>
+              </div>
+            <form class="field-grid" aria-label="債務還款規劃區">
+              <label class="field">
+                <span>額外還款預算</span>
+                <small>填每月穩定可多還的金額，不要把一次性年終或賣股收入直接常態化。</small>
+                <input type="number" id="input-extra-budget" placeholder="15000">
+              </label>
+              <label class="field">
+                <span>優先策略</span>
+                <small>雪球法先清小額債務，雪崩法先清高利率債務。</small>
+                <select id="input-strategy">
+                  <option value="snowball">雪球法</option>
+                  <option value="avalanche">雪崩法</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>最高利率債務</span>
+                <small>系統會自動帶入目前利率最高的負債，方便判斷雪崩法優先目標。</small>
+                <input type="text" id="input-highest-rate-debt" placeholder="信用貸款" readonly>
+              </label>
+              <label class="field">
+                <span>最小餘額債務</span>
+                <small>系統會自動帶入目前餘額最小的負債，方便判斷雪球法優先目標。</small>
+                <input type="text" id="input-smallest-balance-debt" placeholder="股票質押" readonly>
+              </label>
+              <label class="field field-wide">
+                <span>規劃說明</span>
+                <small>可記錄你的偏好，例如保留現金、優先降月付、先處理高壓力貸款等。</small>
+                <textarea rows="4" id="input-plan-note" placeholder="系統會根據債務清單，自動比較清償時間與總利息。"></textarea>
+              </label>
+            </form>
+            </div>
+            <div class="result-box">
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>建議策略</span>
+                  <strong id="recommended-strategy">雪球法</strong>
+                </article>
+                <article class="result-metric">
+                  <span>預估清償月數</span>
+                  <strong id="payoff-months">0 個月</strong>
+                </article>
+                <article class="result-metric">
+                  <span>預估總利息</span>
+                  <strong id="payoff-interest">NT$ 0</strong>
+                </article>
+              </div>
+              <div class="forecast-table-wrap">
+                <table class="forecast-table">
+                  <thead>
+                    <tr>
+                      <th>策略</th>
+                      <th>清償月數</th>
+                      <th>總利息</th>
+                      <th>優先順序</th>
+                    </tr>
+                  </thead>
+                  <tbody id="repayment-table-body"></tbody>
+                </table>
+              </div>
+              <p class="strategy-note" id="strategy-note"></p>
+              <div id="repayment-schedule-list" class="repayment-schedule-list" aria-live="polite"></div>
+              <div class="subsection">
+                <div class="subsection-heading">
+                  <h4>貸款分析</h4>
+                  <p>比較本息壓力、利率上升後月付，以及提前還款 vs 投資。</p>
+                </div>
+                <form class="field-grid compact-grid" aria-label="貸款分析">
+                  <label class="field">
+                    <span>假設投資年化報酬 (%)</span>
+                    <small>用於和提前還款節省利息比較。</small>
+                    <input type="number" id="input-loan-investment-return" placeholder="6">
+                  </label>
+                </form>
+                <div class="result-metric-grid">
+                  <article class="result-metric">
+                    <span>貸款總餘額</span>
+                    <strong id="loan-total-balance">NT$ 0</strong>
+                  </article>
+                  <article class="result-metric">
+                    <span>利率 +1% 後月付估算</span>
+                    <strong id="loan-rate-shock-payment">NT$ 0</strong>
+                  </article>
+                </div>
+                <div class="forecast-table-wrap">
+                  <table class="forecast-table">
+                    <thead>
+                      <tr>
+                        <th>貸款</th>
+                        <th>本息月付</th>
+                        <th>利率 +1% 月付</th>
+                        <th>提前還款年效益</th>
+                        <th>建議比較</th>
+                      </tr>
+                    </thead>
+                    <tbody id="loan-comparison-table-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="layout-grid scenario-grid">
+          <section class="surface">
+            <div class="surface-heading">
+              <div>
+                <h3>情境模擬</h3>
+                <p class="surface-subtitle">用壓力測試看收入下滑、股價波動或提前還款的影響。</p>
+              </div>
+              <span class="surface-pill">Stress Test</span>
+            </div>
+            <div class="subsection">
+              <div class="subsection-heading">
+                <h4>模擬參數</h4>
+                <p>用單一參數快速測試壓力情境，先看現金流會不會破底，再看質押風險。</p>
+              </div>
+            <div id="scenario-quick-buttons" class="quick-action-row" aria-label="情境快速切換">
+              <button type="button" class="ghost-button small-button" data-scenario-preset="income--10">收入 -10%</button>
+              <button type="button" class="ghost-button small-button" data-scenario-preset="income--20">收入 -20%</button>
+              <button type="button" class="ghost-button small-button" data-scenario-preset="market--15">市場 -15%</button>
+              <button type="button" class="ghost-button small-button" data-scenario-preset="market--30">市場 -30%</button>
+            </div>
+            <p id="scenario-status" class="scenario-status">目前情境：未調整</p>
+            <form class="field-grid" aria-label="情境模擬區">
+              <label class="field">
+                <span>收入變動 (%)</span>
+                <small>例如輸入 `-10` 代表收入下滑 10%，可用來測試降薪或接案減少。</small>
+                <input type="number" id="input-scenario-income-change" placeholder="-10">
+              </label>
+              <label class="field">
+                <span>投資 / 質押市值變動 (%)</span>
+                <small>例如輸入 `-15` 代表市場下跌 15%，特別適合檢查股票質押緩衝。</small>
+                <input type="number" id="input-scenario-market-change" placeholder="-15">
+              </label>
+              <label class="field">
+                <span>額外提前還款</span>
+                <small>模擬一次性拿資金提前還債後，對現金與負債壓力的改善幅度。</small>
+                <input type="number" id="input-scenario-extra-paydown" placeholder="100000">
+              </label>
+              <label class="field">
+                <span>觀察期間 (月)</span>
+                <small>建議至少看 12 個月；若有保費、稅金或貸款重設期，可拉長到 24 個月。</small>
+                <input type="number" id="input-scenario-horizon" placeholder="12">
+              </label>
+            </form>
+            </div>
+            <div class="result-box">
+              <div class="result-metric-grid">
+                <article class="result-metric">
+                  <span>情境後月淨流入</span>
+                  <strong id="scenario-monthly-net">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>情境後最低現金</span>
+                  <strong id="scenario-lowest-cash">NT$ 0</strong>
+                </article>
+                <article class="result-metric">
+                  <span>情境後質押維持率</span>
+                  <strong id="scenario-pledge-ratio">0%</strong>
+                </article>
+              </div>
+              <p class="strategy-note" id="scenario-note"></p>
+              <div class="forecast-table-wrap">
+                <table class="forecast-table">
+                  <thead>
+                    <tr>
+                      <th>方案</th>
+                      <th>月現金流</th>
+                      <th>期末淨資產</th>
+                      <th>IRR</th>
+                      <th>現金缺口</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scenario-compare-table-body"></tbody>
+                </table>
+              </div>
+              <div class="forecast-table-wrap">
+                <table class="forecast-table">
+                  <thead>
+                    <tr>
+                      <th>敏感變數</th>
+                      <th>影響金額</th>
+                      <th>影響後淨值</th>
+                      <th>說明</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sensitivity-table-body"></tbody>
+                </table>
+              </div>
+              <div class="result-metric-grid compact-risk-grid">
+                <article class="result-metric">
+                  <span>風險等級</span>
+                  <strong id="risk-level">低</strong>
+                </article>
+                <article class="result-metric">
+                  <span>建議行動</span>
+                  <strong id="risk-action">持續更新資料</strong>
+                </article>
+              </div>
+            </div>
+          </section>
+        </div>
+        </div>
+      </article>
+    </section>
+    <section class="task-panel">
+      <div class="task-panel-heading">
+        <div>
+          <p class="section-kicker">Action Queue</p>
+          <h2>建議動作清單</h2>
+        </div>
+        <span class="panel-tag">可勾選但不影響資料</span>
+      </div>
+      <div id="action-checklist" class="task-list" aria-live="polite"></div>
+      <div id="decision-checklist" class="task-list decision-list" aria-live="polite"></div>
+      <div id="smart-suggestion-list" class="task-list decision-list" aria-live="polite"></div>
+      <div id="notification-list" class="task-list decision-list" aria-live="polite"></div>
+      <div id="education-tip-list" class="task-list decision-list" aria-live="polite"></div>
+      <div id="auto-saving-plan-list" class="task-list decision-list" aria-live="polite"></div>
+    </section>
+    </main>
+  </div>
+
+  <div class="help-modal" id="help-modal" hidden>
+    <div class="help-modal-backdrop" data-help-close="true"></div>
+    <div class="help-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+      <div class="help-modal-header">
+        <h2 id="help-modal-title">七步驟導覽</h2>
+        <button type="button" class="ghost-button small-button" id="help-modal-close">關閉</button>
+      </div>
+      <ol class="help-step-list">
+        <li>資產：先建立可動用現金與核心投資部位。</li>
+        <li>負債：補齊餘額、利率、月付與剩餘期數。</li>
+        <li>現金流：填收入、支出與期初現金。</li>
+        <li>預算：設定分類支出上限並檢查剩餘額度。</li>
+        <li>目標：設定目標金額與時間，確認每月投入需求。</li>
+        <li>預測：查看 12 個月現金與淨值走勢。</li>
+        <li>風險：確認質押緩衝、負債比與決策建議。</li>
+      </ol>
+      <div class="help-modal-footer">
+        <button type="button" class="ghost-button" id="help-modal-dismiss">開始使用</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dist/bundle.js"></script>
+</body>
+</html>
+

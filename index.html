@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Other Tools</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f2ede4;
+      --text: #21170f;
+      --muted: #65584d;
+      --panel: rgba(255, 250, 243, 0.9);
+      --panel-border: rgba(93, 70, 50, 0.12);
+      --primary: #b85b34;
+      --secondary: #215f59;
+      --shadow: 0 22px 60px rgba(63, 41, 18, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans TC", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(220, 141, 66, 0.2), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(33, 95, 89, 0.16), transparent 28%),
+        var(--bg);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 72px; }
+    .hero, .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+    .hero { padding: 40px; }
+    .eyebrow {
+      margin: 0 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--secondary);
+      font: 700 0.78rem "Space Grotesk", sans-serif;
+    }
+    h1 { margin: 0; font-size: clamp(2.1rem, 4vw, 4rem); line-height: 1.1; }
+    .subtitle { margin: 16px 0 0; max-width: 760px; color: var(--muted); line-height: 1.8; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+    .card { padding: 24px; }
+    .card h2 { margin: 0; font-size: 1.35rem; }
+    .card p { margin: 12px 0 18px; color: var(--muted); line-height: 1.7; }
+    .link {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary), #8f3f1e);
+      color: #fff9f4;
+      font-weight: 700;
+    }
+    @media (max-width: 720px) {
+      .page { width: min(100% - 20px, 100%); padding: 20px 0 44px; }
+      .hero, .card { border-radius: 22px; }
+      .hero, .card { padding: 22px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Other Tools</p>
+      <h1>這裡是 `Other` 目錄下的小工具入口。</h1>
+      <p class="subtitle">把目前已建立的前端工具集中成一頁，之後新增新工具時也可以直接在這裡補一張卡片。</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>信用貸款月還款試算</h2>
+        <p>支援月付金、寬限期、APR、提前清償、圖表、PDF、JSON、DSR、利率敏感度與銀行方案比較。</p>
+        <a class="link" href="./CreditLoanCalculator/index.html">前往工具</a>
+      </article>
+
+      <article class="card">
+        <h2>IRR 計算器</h2>
+        <p>以現金流與日期計算 XIRR，並支援批次報酬換算。</p>
+        <a class="link" href="./IRRCalculator/index.html">前往工具</a>
+      </article>
+
+      <article class="card">
+        <h2>Finance Planner</h2>
+        <p>查看既有的理財規劃工具頁面。</p>
+        <a class="link" href="./FinancePlanner/index.html">前往工具</a>
+      </article>
+
+    </section>
+  </main>
+</body>
+</html>

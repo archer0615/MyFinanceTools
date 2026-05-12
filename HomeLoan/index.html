@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HomeLoan 專業房貸與現金流規劃工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>HomeLoan</h1>
+        <p>專業房貸、轉貸、現金流、風險與 Scenario Snapshot 規劃工具</p>
+      </div>
+      <div class="toolbar" aria-label="工具列">
+        <button id="addLoanBtn" class="primary">新增貸款</button>
+        <button id="saveSnapshotBtn">儲存方案</button>
+        <button id="loadSnapshotBtn">載入方案</button>
+        <button id="csvBtn">匯出 CSV</button>
+        <button id="resetBtn" class="danger">重設</button>
+        <button id="undoBtn">Undo</button>
+        <button id="redoBtn">Redo</button>
+      </div>
+    </header>
+
+    <section id="errors" class="errors" hidden></section>
+
+    <section class="summary-grid" aria-label="總結分析區">
+      <article class="metric"><span>總貸款金額</span><strong id="totalPrincipal">$0</strong></article>
+      <article class="metric"><span>目前月付</span><strong id="monthlyPayment">$0</strong></article>
+      <article class="metric"><span>總利息</span><strong id="totalInterest">$0</strong></article>
+      <article class="metric"><span>總還款</span><strong id="totalPaid">$0</strong></article>
+      <article class="metric"><span>最後清償日期</span><strong id="payoffDate">-</strong></article>
+      <article class="metric"><span>節省利息</span><strong id="interestSaved">$0</strong></article>
+    </section>
+
+    <section class="main-grid">
+      <aside class="left-pane">
+        <section class="panel">
+          <div class="section-head">
+            <h2>貸款列表</h2>
+            <select id="templateSelect" aria-label="銀行方案模板">
+              <option value="">套用方案</option>
+              <option value="qingan">青安貸款</option>
+              <option value="firstHome">首購貸款</option>
+              <option value="standard">一般房貸</option>
+            </select>
+          </div>
+          <div id="loanList" class="loan-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head"><h2>轉貸分析</h2><strong id="refiBadge" class="badge">-</strong></div>
+          <div class="form-grid compact">
+            <label>剩餘本金<input id="refiBalance" type="number" min="0" step="10000"></label>
+            <label>目前利率 %<input id="refiOldRate" type="number" min="0" step="0.01"></label>
+            <label>剩餘年限<input id="refiOldYears" type="number" min="1" step="1"></label>
+            <label>新利率 %<input id="refiNewRate" type="number" min="0" step="0.01"></label>
+            <label>新貸款年限<input id="refiNewYears" type="number" min="1" step="1"></label>
+            <label>違約金<input id="refiPenalty" type="number" min="0" step="1000"></label>
+            <label>轉貸成本<input id="refiFee" type="number" min="0" step="1000"></label>
+          </div>
+          <div id="refiResult" class="result-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head"><h2>現金流分析</h2><strong id="cashRiskBadge" class="badge">-</strong></div>
+          <div class="form-grid compact">
+            <label>月收入<input id="incomeInput" type="number" min="0" step="1000"></label>
+            <label>年終<input id="bonusInput" type="number" min="0" step="1000"></label>
+            <label>薪資成長率 %<input id="growthInput" type="number" step="0.1"></label>
+            <label>ETF 投資<input id="etfInput" type="number" min="0" step="1000"></label>
+            <label>房租收入<input id="rentInput" type="number" min="0" step="1000"></label>
+            <label>育兒支出<input id="childInput" type="number" min="0" step="1000"></label>
+            <label>信貸<input id="creditLoanInput" type="number" min="0" step="1000"></label>
+            <label>車貸<input id="carLoanInput" type="number" min="0" step="1000"></label>
+            <label>信用卡分期<input id="cardDebtInput" type="number" min="0" step="1000"></label>
+            <label>每年可額外還款<input id="extraAnnualInput" type="number" min="0" step="10000"></label>
+          </div>
+          <div class="subsection">
+            <div class="subsection-title">利率循環模擬<button id="addRateCycleBtn">新增年度利率</button></div>
+            <div id="rateCycleList" class="row-list"></div>
+          </div>
+          <div class="section-actions">
+            <strong id="dsrBadge" class="badge">0%</strong>
+            <div id="dsrLevel" class="badge safe">安全</div>
+          </div>
+          <div id="cashFlowSummary" class="result-grid cash-flow-summary"></div>
+        </section>
+      </aside>
+
+      <section class="right-pane">
+        <section class="panel" aria-label="圖表分析區">
+          <div class="section-head">
+            <h2>圖表分析</h2>
+            <div id="chartTooltip" class="chart-tooltip" hidden></div>
+          </div>
+          <div class="charts">
+            <div><h3>月付曲線</h3><canvas id="paymentChart" width="640" height="240"></canvas></div>
+            <div><h3>剩餘本金曲線</h3><canvas id="balanceChart" width="640" height="240"></canvas></div>
+            <div><h3>累積利息曲線</h3><canvas id="interestChart" width="640" height="240"></canvas></div>
+            <div><h3>提前還款影響圖</h3><canvas id="prepayChart" width="640" height="240"></canvas></div>
+            <div><h3>本金 / 利息</h3><canvas id="ratioChart" width="640" height="240"></canvas></div>
+            <div><h3>現金流曲線</h3><canvas id="cashChart" width="640" height="240"></canvas></div>
+            <div><h3>房貸佔收入比例</h3><canvas id="debtRatioChart" width="640" height="240"></canvas></div>
+            <div><h3>利率循環月付</h3><canvas id="rateCyclePaymentChart" width="640" height="240"></canvas></div>
+            <div><h3>利率循環利息</h3><canvas id="rateCycleInterestChart" width="640" height="240"></canvas></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>多方案比較</h2>
+          <div id="planTabs" class="tabs"></div>
+          <div class="section-actions"><button id="addPlanBtn">複製目前方案</button></div>
+          <div class="charts compare-charts">
+            <div><h3>多方案月付曲線</h3><canvas id="comparePaymentChart" width="640" height="240"></canvas></div>
+            <div><h3>多方案累積利息</h3><canvas id="compareInterestChart" width="640" height="240"></canvas></div>
+          </div>
+          <div id="comparison" class="comparison"></div>
+        </section>
+
+        <section class="panel">
+          <h2>提前還款最佳化</h2>
+          <div id="optimizerResult" class="result-grid"></div>
+        </section>
+
+        <section class="panel" aria-label="風險提示區">
+          <h2>AI 風險提示</h2>
+          <div id="riskPanel" class="risk-panel"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Scenario Snapshot</h2>
+          <div class="snapshot-bar">
+            <input id="snapshotName" placeholder="Snapshot 名稱">
+            <button id="createSnapshotBtn">建立</button>
+          </div>
+          <div id="snapshotList" class="snapshot-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <h2>攤還表</h2>
+            <button id="copyTableBtn">一鍵複製</button>
+          </div>
+          <div id="virtualTable" class="table-wrap">
+            <table>
+              <thead><tr><th>月份</th><th>日期</th><th>月付</th><th>本金</th><th>利息</th><th>提前還款</th><th>剩餘本金</th></tr></thead>
+              <tbody id="scheduleBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

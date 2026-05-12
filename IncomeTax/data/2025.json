@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "year": 2025,
+    "updatedAt": "2026-05-12",
+    "source": "財政部、財政部稅務入口網",
+    "sourceUrls": [
+      "https://www.mof.gov.tw/",
+      "https://www.etax.nat.gov.tw/"
+    ]
+  },
+  "deductions": {
+    "personalExemption": 97000,
+    "seniorExemption": 145500,
+    "standardSingle": 131000,
+    "standardMarried": 262000,
+    "salary": 218000,
+    "disability": 218000,
+    "education": 25000,
+    "rent": 180000,
+    "preschool": 150000,
+    "preschoolAdditional": 225000,
+    "longTermCare": 180000
+  },
+  "taxBrackets": [
+    {
+      "min": 0,
+      "max": 590000,
+      "rate": 0.05,
+      "quickDeduction": 0
+    },
+    {
+      "min": 590001,
+      "max": 1330000,
+      "rate": 0.12,
+      "quickDeduction": 41300
+    },
+    {
+      "min": 1330001,
+      "max": 2660000,
+      "rate": 0.2,
+      "quickDeduction": 147700
+    },
+    {
+      "min": 2660001,
+      "max": 4980000,
+      "rate": 0.3,
+      "quickDeduction": 413700
+    },
+    {
+      "min": 4980001,
+      "max": null,
+      "rate": 0.4,
+      "quickDeduction": 911700
+    }
+  ]
+}

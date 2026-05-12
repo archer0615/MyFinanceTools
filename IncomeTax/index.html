@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>台灣綜合所得稅試算工具</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/form.css">
+  <link rel="stylesheet" href="css/result.css">
+  <link rel="stylesheet" href="css/print.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">綜所稅試算</p>
+      <h1>台灣綜合所得稅試算工具</h1>
+      <p id="versionInfo" class="muted">載入年度稅率資料中</p>
+    </div>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">深色主題</button>
+  </header>
+
+  <main>
+    <section class="panel result-panel" aria-labelledby="resultTitle">
+      <h2 id="resultTitle">試算結果</h2>
+      <dl class="results">
+        <div><dt>最佳申報方式</dt><dd id="bestStrategy">-</dd></div>
+        <div><dt>總所得</dt><dd id="grossIncome">-</dd></div>
+        <div><dt>總扣除額</dt><dd id="totalDeductions">-</dd></div>
+        <div><dt>綜合所得淨額</dt><dd id="taxableIncome">-</dd></div>
+        <div><dt>應納稅額</dt><dd id="taxAmount">-</dd></div>
+        <div><dt>有效稅率</dt><dd id="effectiveRate">-</dd></div>
+        <div><dt>邊際稅率</dt><dd id="marginalRate">-</dd></div>
+      </dl>
+      <div class="result-grid">
+        <section class="result-block">
+          <h3>扣除額明細</h3>
+          <div id="deductionBreakdown" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>扶養摘要</h3>
+          <div id="dependentSummary" class="breakdown"></div>
+        </section>
+        <section class="result-block analysis-block">
+          <h3>節稅分析</h3>
+          <div id="taxSavingAnalysis" class="analysis"></div>
+        </section>
+      </div>
+      <div class="chart-grid">
+        <section class="result-block">
+          <h3>有效稅率圖</h3>
+          <canvas id="effectiveRateChart" width="320" height="160"></canvas>
+        </section>
+        <section class="result-block">
+          <h3>稅率級距圖</h3>
+          <canvas id="taxBracketChart" width="320" height="160"></canvas>
+        </section>
+        <section class="result-block">
+          <h3>年度比較圖</h3>
+          <canvas id="yearComparisonChart" width="320" height="160"></canvas>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel input-panel" aria-labelledby="calculatorTitle">
+      <h2 id="calculatorTitle">試算資料</h2>
+      <form id="taxForm" class="tax-form">
+        <label>
+          年度
+          <select id="taxYear" name="year"></select>
+        </label>
+
+        <label>
+          申報模式
+          <select id="filingMode" name="filingMode">
+            <option value="single">單獨申報</option>
+            <option value="joint">夫妻合併申報</option>
+            <option value="auto">自動比較最佳方案</option>
+          </select>
+        </label>
+
+        <fieldset>
+          <legend>本人收入</legend>
+          <label>薪資所得<input name="salaryIncome" type="number" min="0" step="1000" value="800000"></label>
+          <label>執行業務所得<input name="professionalIncome" type="number" min="0" step="1000" value="0"></label>
+          <label>股利所得<input name="dividendIncome" type="number" min="0" step="1000" value="0"></label>
+          <label>其他所得<input name="otherIncome" type="number" min="0" step="1000" value="0"></label>
+        </fieldset>
+
+        <fieldset id="spouseSection">
+          <legend>配偶收入</legend>
+          <label>薪資所得<input name="spouseSalaryIncome" type="number" min="0" step="1000" value="0"></label>
+          <label>執行業務所得<input name="spouseProfessionalIncome" type="number" min="0" step="1000" value="0"></label>
+          <label>股利所得<input name="spouseDividendIncome" type="number" min="0" step="1000" value="0"></label>
+          <label>其他所得<input name="spouseOtherIncome" type="number" min="0" step="1000" value="0"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>扶養親屬</legend>
+          <div id="dependentsList" class="dependents-list"></div>
+          <button id="addDependent" class="secondary-button" type="button">新增扶養親屬</button>
+        </fieldset>
+
+        <details open>
+          <summary>列舉扣除額</summary>
+          <div class="details-grid">
+            <label>本人保險費<input name="insuranceSelf" type="number" min="0" step="1000" value="0"></label>
+            <label>配偶保險費<input name="insuranceSpouse" type="number" min="0" step="1000" value="0"></label>
+            <label>扶養親屬保險費<input name="insuranceDependents" type="number" min="0" step="1000" value="0"></label>
+            <label>全民健保費<input name="nationalHealthInsurance" type="number" min="0" step="1000" value="0"></label>
+            <label>醫療費<input name="medical" type="number" min="0" step="1000" value="0"></label>
+            <label>生育費<input name="childbirth" type="number" min="0" step="1000" value="0"></label>
+            <label>一般捐贈<input name="donationGeneral" type="number" min="0" step="1000" value="0"></label>
+            <label>政治獻金<input name="donationPolitical" type="number" min="0" step="1000" value="0"></label>
+            <label>公益團體捐贈<input name="donationPublic" type="number" min="0" step="1000" value="0"></label>
+            <label>災害損失金額<input name="disasterLoss" type="number" min="0" step="1000" value="0"></label>
+            <label>房貸利息<input name="mortgageInterest" type="number" min="0" step="1000" value="0"></label>
+            <label>租金支出<input name="rent" type="number" min="0" step="1000" value="0"></label>
+            <label>長期照顧人數<input name="longTermCareCount" type="number" min="0" step="1" value="0"></label>
+            <label>幼兒學前人數<input name="preschoolChildren" type="number" min="0" step="1" value="0"></label>
+            <label>大專院校學費人數<input name="educationCount" type="number" min="0" step="1" value="0"></label>
+          </div>
+        </details>
+
+        <div class="form-actions">
+          <button type="submit">重新計算</button>
+          <button id="shareButton" class="secondary-button" type="button">複製分享連結</button>
+          <button id="printButton" class="secondary-button" type="button">列印結果</button>
+        </div>
+      </form>
+      <p id="errorMessage" class="error" role="alert" hidden>無法載入稅率資料</p>
+    </section>
+  </main>
+
+  <footer>
+    <span id="sourceInfo">資料來源：財政部、財政部稅務入口網</span>
+  </footer>
+
+  <script src="data/tax-data.js"></script>
+  <script src="js/formatter.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/dependent-engine.js"></script>
+  <script src="js/deduction-engine.js"></script>
+  <script src="js/tax-engine.js"></script>
+  <script src="js/filing-strategy.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/share.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

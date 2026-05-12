@@ -1,0 +1,38 @@
+name: Update tax data
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-tax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/scrape-tax.js
+      - name: Build tax data
+        run: node scripts/build-data.js
+      - run: node scripts/validate-tax-data.js
+      - name: Generate changelog
+        run: node scripts/generate-changelog.js
+      - name: Run app checks
+        run: node scripts/run-all-tests.js
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: income-tax-data
+          path: |
+            data/tax-data.js
+            data/CHANGELOG.md
+      - name: Commit updated data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update income tax data"
+          file_pattern: data/*.json data/tax-data.js data/CHANGELOG.md

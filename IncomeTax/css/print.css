@@ -1,0 +1,31 @@
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .site-header,
+  main,
+  footer {
+    width: 100%;
+  }
+
+  .input-panel,
+  .form-actions,
+  button,
+  input,
+  select,
+  details,
+  fieldset {
+    display: none !important;
+  }
+
+  main {
+    display: block;
+  }
+
+  .panel {
+    border: 0;
+    padding: 0;
+  }
+}

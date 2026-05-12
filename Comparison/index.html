@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparison | 提前還房貸 vs ETF 投資比較器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Comparison</p>
+        <h1>提前還房貸 vs ETF 投資比較器</h1>
+        <p class="hero-copy">輸入房貸與 ETF 假設，即時計算長期淨資產差異。</p>
+      </div>
+      <div class="hero-result" aria-live="polite">
+        <span class="result-label">建議方案</span>
+        <strong id="recommendation">請輸入資料</strong>
+      </div>
+    </section>
+
+    <section class="dashboard">
+      <form class="input-panel" id="comparisonForm" novalidate>
+        <h2>輸入條件</h2>
+        <div class="field-grid">
+          <label class="field">
+            <span>房貸餘額</span>
+            <input id="loanBalance" type="number" min="1" step="10000" value="3000000" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>房貸利率 (%)</span>
+            <input id="loanRate" type="number" min="0" step="0.01" value="2.1" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>剩餘年限</span>
+            <input id="loanYears" type="number" min="1" step="1" value="20" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>ETF 年化報酬 (%)</span>
+            <input id="etfReturn" type="number" min="-100" step="0.1" value="6" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>通膨率 (%)</span>
+            <input id="inflationRate" type="number" min="-50" step="0.1" value="2" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>稅率 (%)</span>
+            <input id="taxRate" type="number" min="0" max="100" step="0.1" value="20" inputmode="decimal">
+          </label>
+        </div>
+        <p class="error-message" id="errorMessage" role="alert"></p>
+      </form>
+
+      <section class="summary-panel" aria-label="計算結果">
+        <article class="metric">
+          <span>提前還貸節省利息</span>
+          <strong id="interestSaved">NT$0</strong>
+        </article>
+        <article class="metric">
+          <span>ETF 投資未來價值</span>
+          <strong id="etfFutureValue">NT$0</strong>
+        </article>
+        <article class="metric">
+          <span>淨資產差異</span>
+          <strong id="netDifference">NT$0</strong>
+        </article>
+        <article class="metric">
+          <span>ETF 實質報酬率</span>
+          <strong id="realReturn">0.00%</strong>
+        </article>
+      </section>
+    </section>
+
+    <section class="charts">
+      <article class="chart-panel">
+        <div class="chart-heading">
+          <h2>雙路徑資產曲線</h2>
+          <div class="legend">
+            <span><i class="legend-etf"></i>ETF 投資</span>
+            <span><i class="legend-loan"></i>提前還貸</span>
+          </div>
+        </div>
+        <canvas id="assetChart" width="900" height="360" aria-label="雙路徑資產曲線"></canvas>
+      </article>
+
+      <article class="chart-panel">
+        <div class="chart-heading">
+          <h2>利息節省圖</h2>
+          <div class="legend">
+            <span><i class="legend-save"></i>累積節省利息</span>
+          </div>
+        </div>
+        <canvas id="interestChart" width="900" height="260" aria-label="利息節省圖"></canvas>
+      </article>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

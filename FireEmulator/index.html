@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIRE 退休模擬器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">FIRE Emulator</p>
+        <h1>FIRE 退休模擬器</h1>
+        <p>以資產、投入、報酬、通膨與退休支出估算可退休年齡、退休資產與資產耗盡時間。</p>
+      </div>
+      <button id="resetBtn" type="button">重設</button>
+    </header>
+
+    <section class="metrics" aria-label="退休模擬結果">
+      <article><span>幾歲可退休</span><strong id="retireAge">-</strong></article>
+      <article><span>預估退休資產</span><strong id="retireAsset">$0</strong></article>
+      <article><span>資產耗盡時間</span><strong id="depleteAge">-</strong></article>
+      <article><span>安全提領率</span><strong id="swr">0%</strong></article>
+      <article><span>建議每月增加投入</span><strong id="extraMonthly">$0</strong></article>
+    </section>
+
+    <section class="layout">
+      <aside class="panel input-panel">
+        <h2>輸入條件</h2>
+        <form id="fireForm" class="form-grid">
+          <label>年齡<input id="age" type="number" min="18" max="90" step="1" value="35"></label>
+          <label>退休年齡<input id="targetRetireAge" type="number" min="19" max="95" step="1" value="55"></label>
+          <label>現有資產<input id="currentAssets" type="number" min="0" step="10000" value="3000000"></label>
+          <label>每月投入金額<input id="monthlyInvest" type="number" min="0" step="1000" value="30000"></label>
+          <label>預期年化報酬率 %<input id="annualReturn" type="number" min="-20" max="30" step="0.1" value="5"></label>
+          <label>通膨率 %<input id="inflation" type="number" min="0" max="20" step="0.1" value="2"></label>
+          <label>退休後每月支出<input id="monthlyExpense" type="number" min="0" step="1000" value="60000"></label>
+        </form>
+        <div id="status" class="status"></div>
+      </aside>
+
+      <section class="panel charts-panel">
+        <div class="section-head">
+          <h2>資產成長曲線</h2>
+          <span id="horizonLabel">-</span>
+        </div>
+        <canvas id="assetChart" width="900" height="300"></canvas>
+      </section>
+
+      <section class="panel charts-panel">
+        <div class="section-head">
+          <h2>現金流圖表</h2>
+          <span>投入與支出換算年額</span>
+        </div>
+        <canvas id="cashflowChart" width="900" height="300"></canvas>
+      </section>
+
+      <section class="panel charts-panel">
+        <div class="section-head">
+          <h2>資產耗盡模擬</h2>
+          <span>退休後逐年提領</span>
+        </div>
+        <canvas id="depletionChart" width="900" height="300"></canvas>
+      </section>
+    </section>
+  </main>
+  <script src="worker.js"></script>
+</body>
+</html>

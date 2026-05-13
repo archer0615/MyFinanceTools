@@ -8,6 +8,9 @@ const requiredDeductions = [
   "standardMarried",
   "salary",
   "education",
+  "savings",
+  "basicLivingExpense",
+  "mortgageInterest",
   "rent",
   "longTermCare"
 ];
@@ -26,6 +29,11 @@ function validateFile(filePath) {
   assert(Array.isArray(data.taxBrackets) && data.taxBrackets.length > 0, `${filePath}: taxBrackets is required`);
 
   requiredDeductions.forEach((key) => {
+    if (key === "savings" || key === "mortgageInterest" || key === "basicLivingExpense") {
+      const limitKey = key === "basicLivingExpense" ? "perPerson" : "limit";
+      assert(data.deductions[key] && Number.isFinite(data.deductions[key][limitKey]) && data.deductions[key][limitKey] >= 0, `${filePath}: invalid deduction ${key}.${limitKey}`);
+      return;
+    }
     assert(Number.isFinite(data.deductions[key]) && data.deductions[key] >= 0, `${filePath}: invalid deduction ${key}`);
   });
 
@@ -48,6 +56,9 @@ function validateYearOverYear(files, yearlyData) {
     const previous = yearlyData[sorted[index]].deductions;
     const current = yearlyData[year].deductions;
     Object.keys(current).forEach((key) => {
+      if (typeof current[key] !== "number" || typeof previous[key] !== "number") {
+        return;
+      }
       if (previous[key] === 0 || previous[key] === undefined) {
         return;
       }

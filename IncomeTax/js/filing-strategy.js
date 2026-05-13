@@ -25,6 +25,12 @@
         body: "本工具以綜合所得合併課稅估算，股利分離課稅需另依 28% 稅率與可抵減稅額比較。"
       },
       {
+        title: "房貸利息與儲蓄扣除",
+        body: activeResult.deductions.savings > 0 && activeResult.deductions.itemizedBreakdown.mortgageInterestPaid > 0
+          ? "因已有儲蓄投資特別扣除額，房貸利息扣除額將減少。實際可扣金額：" + window.IncomeTaxApp.utils.formatCurrency(activeResult.deductions.mortgageInterest)
+          : "房貸利息列舉扣除會先扣除儲蓄投資特別扣除額，再適用上限。"
+      },
+      {
         title: "最佳申報方式",
         body: label(recommended) + " + " + activeResult.deductions.mode + "；預估節省：" + window.IncomeTaxApp.utils.formatCurrency(saving)
       }
@@ -36,6 +42,7 @@
       recommendedLabel: label(activeType),
       saving: saving,
       activeResult: activeResult,
+      inputData: input,
       strategies: {
         separate: separate,
         joint: joint

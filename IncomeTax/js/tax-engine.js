@@ -1,7 +1,7 @@
 (function () {
   function toNumber(value) {
     const number = Number(value);
-    return Number.isFinite(number) && number > 0 ? number : 0;
+    return Number.isFinite(number) && number > 0 ? Math.floor(number) : 0;
   }
 
   function findBracket(brackets, taxableIncome) {
@@ -12,7 +12,11 @@
   }
 
   function sumIncome(person) {
-    return toNumber(person.salaryIncome) + toNumber(person.professionalIncome) + toNumber(person.dividendIncome) + toNumber(person.otherIncome);
+    return toNumber(person.salaryIncome) + toNumber(person.professionalIncome) + toNumber(person.dividendIncome) + toNumber(person.interestIncome) + toNumber(person.otherIncome);
+  }
+
+  function sumInterestIncome(input, spouseIncluded) {
+    return toNumber(input.taxpayer.interestIncome) + (spouseIncluded ? toNumber(input.spouse.interestIncome) : 0);
   }
 
   function buildDeductionSet(data, input, options) {
@@ -25,15 +29,30 @@
     const deductionStrategy = compareDeductionStrategies(data, input, options);
     const useItemized = deductionStrategy.bestStrategy === "itemized";
     const baseDeduction = useItemized ? itemized.total : standard;
+    const personalExemption = deductions.personalExemption * taxpayerCount + dependentDeduction.exemption;
+    const disabilityDeduction = dependentDeduction.disability;
     const taxpayerSalary = Math.min(toNumber(input.taxpayer.salaryIncome), deductions.salary || 0);
     const spouseSalary = spouseIncluded ? Math.min(toNumber(input.spouse.salaryIncome), deductions.salary || 0) : 0;
+    const interestIncome = sumInterestIncome(input, spouseIncluded);
+    const savingsDeduction = window.IncomeTaxApp.deductions.calculateSavingsDeduction(data, interestIncome);
     const educationDeduction = toNumber(input.deductions.educationCount) * (deductions.education || 0);
     const preschoolChildren = toNumber(input.deductions.preschoolChildren);
     const preschoolDeduction = preschoolChildren === 0 ? 0 : (deductions.preschool || 0) + Math.max(0, preschoolChildren - 1) * (deductions.preschoolAdditional || deductions.preschool || 0);
     const longTermCareDeduction = toNumber(input.deductions.longTermCareCount) * (deductions.longTermCare || 0);
-    const special = taxpayerSalary + spouseSalary + educationDeduction + preschoolDeduction + longTermCareDeduction;
-    const exemption = deductions.personalExemption * taxpayerCount + dependentDeduction.exemption + dependentDeduction.disability;
-    const total = exemption + baseDeduction + special;
+    const basicLiving = window.IncomeTaxApp.deductions.calculateBasicLivingDeduction(data, {
+      personCount: taxpayerCount + (input.dependents || []).length,
+      exemption: personalExemption,
+      baseDeduction: baseDeduction,
+      savingsDeduction: savingsDeduction,
+      disabilityDeduction: disabilityDeduction,
+      educationDeduction: educationDeduction,
+      preschoolDeduction: preschoolDeduction,
+      longTermCareDeduction: longTermCareDeduction,
+      rentDeduction: itemized.breakdown.rentSpecial
+    });
+    const special = taxpayerSalary + spouseSalary + savingsDeduction + educationDeduction + preschoolDeduction + longTermCareDeduction + disabilityDeduction;
+    const exemption = personalExemption;
+    const total = exemption + baseDeduction + special + basicLiving.difference;
 
     return {
       mode: useItemized ? "列舉扣除額" : "標準扣除額",
@@ -42,8 +61,14 @@
       itemized: itemized.total,
       itemizedBreakdown: itemized.breakdown,
       base: baseDeduction,
+      basicLiving: basicLiving,
+      basicLivingDifference: basicLiving.difference,
       salary: taxpayerSalary + spouseSalary,
+      disability: disabilityDeduction,
+      interestIncome: interestIncome,
+      savings: savingsDeduction,
       rent: itemized.breakdown.rentSpecial,
+      mortgageInterest: itemized.breakdown.mortgageInterest,
       education: educationDeduction,
       preschool: preschoolDeduction,
       longTermCare: longTermCareDeduction,

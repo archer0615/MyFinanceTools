@@ -44,7 +44,6 @@
     const result = window.IncomeTaxApp.strategy.compareFilingStrategies(currentData, input);
     window.IncomeTaxApp.state.result = result;
     window.IncomeTaxApp.storage.saveState(window.IncomeTaxApp.state);
-    window.history.replaceState(null, "", window.IncomeTaxApp.share.serializeStateToUrl(window.IncomeTaxApp.state));
     window.IncomeTaxApp.ui.renderResult(result);
     refreshSpouseVisibility();
   }
@@ -61,6 +60,7 @@
     currentData = loadTaxData(year);
     window.IncomeTaxApp.state.currentYear = Number(year);
     window.IncomeTaxApp.ui.renderVersion(currentData);
+    window.IncomeTaxApp.ui.renderYearData(currentData);
     calculateAndRender();
   }
 
@@ -105,13 +105,13 @@
       const taxData = getTaxDataStore();
       const availableYears = Object.keys(taxData.years).map(Number).sort(function (a, b) { return a - b; });
       window.IncomeTaxApp.storage.loadState(window.IncomeTaxApp.state);
-      window.IncomeTaxApp.share.loadStateFromUrl(window.IncomeTaxApp.state);
       currentData = loadTaxData(window.IncomeTaxApp.state.currentYear || taxData.currentYear);
       applyTheme(window.IncomeTaxApp.state.theme);
       populateYears(yearSelect, availableYears, currentData.meta.year);
       window.IncomeTaxApp.ui.setFormValues(form, window.IncomeTaxApp.state);
       window.IncomeTaxApp.ui.renderDependents(window.IncomeTaxApp.state.dependents);
       window.IncomeTaxApp.ui.renderVersion(currentData);
+      window.IncomeTaxApp.ui.renderYearData(currentData);
       calculateAndRender();
       window.IncomeTaxApp.ui.setError(false);
     } catch (error) {
@@ -136,15 +136,6 @@
       window.IncomeTaxApp.state.theme = window.IncomeTaxApp.state.theme === "dark" ? "light" : "dark";
       applyTheme(window.IncomeTaxApp.state.theme);
       window.IncomeTaxApp.storage.saveState(window.IncomeTaxApp.state);
-    });
-    document.getElementById("shareButton").addEventListener("click", function () {
-      const url = window.location.href;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(url);
-      }
-    });
-    document.getElementById("printButton").addEventListener("click", function () {
-      window.print();
     });
   }
 

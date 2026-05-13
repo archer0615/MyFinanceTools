@@ -17,6 +17,15 @@
     "salary": 218000,
     "disability": 218000,
     "education": 25000,
+    "savings": {
+      "limit": 270000
+    },
+    "basicLivingExpense": {
+      "perPerson": 210000
+    },
+    "mortgageInterest": {
+      "limit": 300000
+    },
     "rent": 180000,
     "preschool": 120000,
     "preschoolAdditional": 225000,

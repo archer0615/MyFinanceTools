@@ -61,9 +61,21 @@ fieldset {
 
 .form-actions {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  display: block;
+  min-height: 0;
+}
+
+.floating-calc-button {
+  position: fixed;
+  right: max(18px, calc((100vw - 1080px) / 2 - 92px));
+  top: 50%;
+  z-index: 20;
+  width: 92px;
+  min-height: 92px;
+  border-radius: 999px;
+  padding: 12px;
+  box-shadow: 0 14px 32px rgba(18, 38, 63, 0.22);
+  line-height: 1.25;
 }
 
 .secondary-button {
@@ -79,5 +91,13 @@ fieldset {
   .dependent-card,
   .form-actions {
     grid-template-columns: 1fr;
+  }
+
+  .floating-calc-button {
+    right: 14px;
+    bottom: 16px;
+    top: auto;
+    width: 84px;
+    min-height: 84px;
   }
 }

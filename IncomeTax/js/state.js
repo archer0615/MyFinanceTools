@@ -8,12 +8,14 @@
       salaryIncome: 800000,
       professionalIncome: 0,
       dividendIncome: 0,
+      interestIncome: 0,
       otherIncome: 0
     },
     spouse: {
       salaryIncome: 0,
       professionalIncome: 0,
       dividendIncome: 0,
+      interestIncome: 0,
       otherIncome: 0
     },
     dependents: [],
@@ -28,6 +30,9 @@
       donationPolitical: 0,
       donationPublic: 0,
       disasterLoss: 0,
+      isSelfUseResidence: false,
+      hasHouseholdRegistration: false,
+      isRented: false,
       mortgageInterest: 0,
       rent: 0,
       longTermCareCount: 0,

@@ -21,6 +21,15 @@ window.IncomeTaxApp.data = {
         "salary": 218000,
         "disability": 218000,
         "education": 25000,
+        "savings": {
+          "limit": 270000
+        },
+        "basicLivingExpense": {
+          "perPerson": 210000
+        },
+        "mortgageInterest": {
+          "limit": 300000
+        },
         "rent": 180000,
         "preschool": 120000,
         "preschoolAdditional": 225000,
@@ -78,6 +87,15 @@ window.IncomeTaxApp.data = {
         "salary": 218000,
         "disability": 218000,
         "education": 25000,
+        "savings": {
+          "limit": 270000
+        },
+        "basicLivingExpense": {
+          "perPerson": 213000
+        },
+        "mortgageInterest": {
+          "limit": 300000
+        },
         "rent": 180000,
         "preschool": 150000,
         "preschoolAdditional": 225000,
@@ -135,6 +153,15 @@ window.IncomeTaxApp.data = {
         "salary": 227000,
         "disability": 227000,
         "education": 25000,
+        "savings": {
+          "limit": 270000
+        },
+        "basicLivingExpense": {
+          "perPerson": 213000
+        },
+        "mortgageInterest": {
+          "limit": 300000
+        },
         "rent": 180000,
         "preschool": 150000,
         "preschoolAdditional": 225000,
@@ -176,6 +203,6 @@ window.IncomeTaxApp.data = {
   },
   "meta": {
     "schemaVersion": 1,
-    "checksum": "5aad58bb842d74da09fc0462108740c9b6462c0da6a6bdbfcde3ae858dddeb70"
+    "checksum": "e1effab16472c50e01a3ce86254fb5674397d1a0ca5a87557533991451a47726"
   }
 };

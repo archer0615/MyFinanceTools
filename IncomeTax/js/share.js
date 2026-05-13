@@ -35,7 +35,11 @@
     });
     Object.keys(state.deductions || {}).forEach(function (key) {
       if (params.has(key)) {
-        state.deductions[key] = Number(params.get(key)) || 0;
+        if (typeof state.deductions[key] === "boolean") {
+          state.deductions[key] = params.get(key) === "true";
+        } else {
+          state.deductions[key] = Number(params.get(key)) || 0;
+        }
       }
     });
     return true;

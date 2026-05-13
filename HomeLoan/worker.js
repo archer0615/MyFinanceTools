@@ -61,7 +61,7 @@ function buildSchedule(rawLoan, rateOffset) {
   var fixedPrincipal = totalMonths > graceMonths ? roundCurrency(balance / (totalMonths - graceMonths)) : balance;
   var lastRate = null;
   var firstContractPayment = 0;
-  var originalInterest = 0;
+  var lockedPayment = 0;
 
   if (!loan.rates.length) loan.rates.push({ months: totalMonths, rate: 0 });
   if (balance <= 0) errors.push(loan.name + "：貸款金額不可小於或等於 0");
@@ -86,6 +86,7 @@ function buildSchedule(rawLoan, rateOffset) {
         principal = Math.min(balance, fixedPrincipal);
         normalPayment = roundCurrency(principal + interest);
       } else {
+        if (lockedPayment) payment = lockedPayment;
         principal = Math.min(balance, Math.max(0, roundCurrency(payment - interest)));
         if (remaining === 1 || balance < payment) principal = balance;
         normalPayment = roundCurrency(principal + interest);
@@ -101,6 +102,9 @@ function buildSchedule(rawLoan, rateOffset) {
       payment = annuityPayment(balance, rate, Math.max(1, totalMonths - m));
       fixedPrincipal = roundCurrency(balance / Math.max(1, totalMonths - m));
     }
+    if (prepay > 0 && loan.prepayMode === "shortenTerm" && !lockedPayment && !inGrace) {
+      lockedPayment = payment;
+    }
 
     rows.push({
       loanId: loan.id,
@@ -115,7 +119,6 @@ function buildSchedule(rawLoan, rateOffset) {
       balance: balance,
       contractPayment: firstContractPayment || normalPayment
     });
-    originalInterest = roundCurrency(originalInterest + interest);
   }
 
   return { rows: rows, errors: errors, totalMonths: totalMonths, payoffMonths: rows.length };
@@ -124,8 +127,9 @@ function buildSchedule(rawLoan, rateOffset) {
 function combineRows(rows) {
   var byMonth = {};
   rows.forEach(function (row) {
-    var item = byMonth[row.month] || { month: row.month, date: row.date, payment: 0, principal: 0, interest: 0, prepay: 0, balance: 0 };
+    var item = byMonth[row.month] || { month: row.month, date: row.date, payment: 0, normalPayment: 0, principal: 0, interest: 0, prepay: 0, balance: 0 };
     item.payment = roundCurrency(item.payment + row.payment);
+    item.normalPayment = roundCurrency(item.normalPayment + row.normalPayment);
     item.principal = roundCurrency(item.principal + row.principal);
     item.interest = roundCurrency(item.interest + row.interest);
     item.prepay = roundCurrency(item.prepay + row.prepay);
@@ -185,11 +189,20 @@ function refinance(input) {
   var newInterest = roundCurrency(newPay * newMonths - balance);
   var cost = roundCurrency(clamp(input.penalty, 0) + clamp(input.fee, 0));
   var saving = roundCurrency(oldInterest - newInterest);
-  return { oldInterest: oldInterest, newInterest: newInterest, cost: cost, netSaving: roundCurrency(saving - cost), breakEvenYears: oldPay > newPay ? roundCurrency(cost / (oldPay - newPay) / 12) : 0, worth: saving > cost };
+  var monthlySaving = roundCurrency(oldPay - newPay);
+  return { oldPay: oldPay, newPay: newPay, oldInterest: oldInterest, newInterest: newInterest, cost: cost, grossSaving: saving, netSaving: roundCurrency(saving - cost), monthlySaving: monthlySaving, breakEvenYears: monthlySaving > 0 && cost > 0 ? roundCurrency(cost / monthlySaving / 12) : 0, worth: saving > cost };
+}
+
+function comparePlans(plans) {
+  return (plans || []).map(function (plan) {
+    return { plan: { id: plan.id, name: plan.name }, result: calculatePlan(plan, 0) };
+  });
 }
 
 function optimizePrepay(plan, annualAmount) {
-  var best = { year: "-", saving: 0, strategy: "無額外還款" };
+  annualAmount = roundCurrency(clamp(annualAmount, 0));
+  if (annualAmount <= 0) return { year: "-", saving: 0, strategy: "請輸入每年可額外還款", mode: "-" };
+  var best = { year: "-", saving: 0, strategy: "無明顯效益", mode: "-" };
   var base = calculatePlan(plan, 0);
   var maxYears = Math.max(1, Math.ceil(base.payoffMonths / 12));
   for (var year = 1; year <= maxYears; year += 1) {
@@ -201,7 +214,7 @@ function optimizePrepay(plan, annualAmount) {
       });
       var test = calculatePlan(clone, 0);
       var saving = roundCurrency(base.totalInterest - test.totalInterest);
-      if (saving > best.saving) best = { year: year, saving: saving, strategy: mode === "shortenTerm" ? "縮短年限" : "降低月付" };
+      if (saving > best.saving) best = { year: year, saving: saving, mode: mode, strategy: mode === "shortenTerm" ? "縮短年限" : "降低月付" };
     });
   }
   return best;
@@ -209,8 +222,11 @@ function optimizePrepay(plan, annualAmount) {
 
 function rateSimulation(plan, cycles) {
   var clone = JSON.parse(JSON.stringify(plan));
+  cycles = (cycles || []).slice().sort(function (a, b) { return (Number(a.year) || 0) - (Number(b.year) || 0); });
   clone.loans.forEach(function (loan) {
-    loan.rates = (cycles || []).map(function (c, index, arr) {
+    var valid = cycles.filter(function (c) { return (Number(c.year) || 0) <= (Number(loan.years) || 1); });
+    if (!valid.length) valid = [{ year: 1, rate: (loan.rates && loan.rates[0] && loan.rates[0].rate) || 0 }];
+    loan.rates = valid.map(function (c, index, arr) {
       var next = arr[index + 1];
       return { months: Math.max(12, ((next ? next.year : loan.years + 1) - c.year) * 12), rate: c.rate };
     });
@@ -231,7 +247,8 @@ self.onmessage = function (event) {
     cashFlow: simulateCashFlow(plan, result),
     refinance: refinance(payload.refinance || {}),
     optimizer: optimizePrepay(plan, clamp(payload.extraAnnual, 0)),
-    rateSimulation: rateSimulation(plan, payload.rateCycles || [])
+    rateSimulation: rateSimulation(plan, payload.rateCycles || []),
+    comparison: comparePlans(payload.plans || [plan])
   };
   response.requestId = requestId;
   self.postMessage({ type: "RESULT", requestId: requestId, payload: response });

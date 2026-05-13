@@ -68,7 +68,9 @@ const App = (() => {
       rateCycles: [{ year: 1, rate: 2.1 }, { year: 3, rate: 2.5 }, { year: 6, rate: 2.2 }],
       stressTest: {},
       compareScenarios: [],
-      refinanceHistory: []
+      refinanceHistory: [],
+      stressTestHistory: [],
+      cashFlowSimulations: []
     }]
   };
   let snapshotCache = [];
@@ -77,9 +79,12 @@ const App = (() => {
   let calcWorker = null;
   let calcRequestId = 0;
   let latestAppliedRequestId = 0;
+  let renderTimer = null;
+  const historySignatures = {};
   const pendingCalcs = new Map();
-  const history = { stack: [], pointer: -1, limit: 80 };
+  const history = { stack: [], pointer: -1, limit: 80, lastInputAt: 0 };
   const virtualTable = { rowHeight: 37, overscan: 8 };
+  let workerFallbackReason = "";
 
   const clamp = (value, min, max = Number.MAX_SAFE_INTEGER) => Math.min(max, Math.max(min, Number(value) || 0));
   const roundCurrency = (value) => {
@@ -105,6 +110,11 @@ const App = (() => {
     history.pointer = history.stack.length - 1;
     updateHistoryButtons();
   };
+  const pushInputHistory = () => {
+    const now = Date.now();
+    if (now - history.lastInputAt > 700) pushHistory();
+    history.lastInputAt = now;
+  };
   const updateHistoryButtons = () => {
     if ($("undoBtn")) $("undoBtn").disabled = history.pointer <= 0;
     if ($("redoBtn")) $("redoBtn").disabled = history.pointer >= history.stack.length - 1;
@@ -114,7 +124,7 @@ const App = (() => {
     isRestoringHistory = true;
     history.pointer -= 1;
     restoreState(stateCloneFromHistory());
-    render({ skipHistory: true });
+    render({ skipHistory: true, delay: 0 });
     isRestoringHistory = false;
     updateHistoryButtons();
   };
@@ -123,7 +133,7 @@ const App = (() => {
     isRestoringHistory = true;
     history.pointer += 1;
     restoreState(stateCloneFromHistory());
-    render({ skipHistory: true });
+    render({ skipHistory: true, delay: 0 });
     isRestoringHistory = false;
     updateHistoryButtons();
   };
@@ -132,10 +142,18 @@ const App = (() => {
     const date = new Date(start.getFullYear(), start.getMonth() + monthIndex, 1);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   };
+  const setWorkerStatus = (mode, text) => {
+    const node = $("workerStatus");
+    if (!node) return;
+    node.textContent = String(text || "");
+    node.className = `worker-status ${mode}`;
+  };
 
   const initWorker = () => {
     try {
       calcWorker = new Worker("worker.js");
+      workerFallbackReason = "";
+      setWorkerStatus("ready", "Worker 計算啟用");
       calcWorker.onmessage = event => {
         const message = event.data || {};
         const requestId = message.requestId || message.payload?.requestId;
@@ -145,31 +163,60 @@ const App = (() => {
         pending.resolve(message.payload);
       };
       calcWorker.onerror = () => {
+        try { calcWorker?.terminate(); } catch {}
         calcWorker = null;
+        workerFallbackReason = "Worker 執行失敗，已切換主執行緒計算";
+        setWorkerStatus("error", workerFallbackReason);
         pendingCalcs.forEach(item => item.reject(new Error("Worker failed")));
         pendingCalcs.clear();
       };
     } catch {
       calcWorker = null;
+      workerFallbackReason = "Worker 無法啟動，已切換主執行緒計算";
+      setWorkerStatus("fallback", workerFallbackReason);
     }
   };
 
-  const calculatePlanAsync = (plan, rateOffset = 0) => {
-    if (!calcWorker) return Promise.resolve({ result: calculatePlan(plan, rateOffset), worker: false });
+  const calculatePlanAsync = (plan, options = {}) => {
+    const rateOffset = options.rateOffset || 0;
+    const extraAnnual = options.extraAnnual || 0;
+    if (!calcWorker) return Promise.resolve(fallbackPayload(plan, options, workerFallbackReason || "Worker 未啟用，已切換主執行緒計算"));
     const requestId = ++calcRequestId;
     return new Promise(resolve => {
       pendingCalcs.set(requestId, {
         resolve: payload => resolve({ ...(payload || {}), worker: true, requestId }),
-        reject: () => resolve({ result: calculatePlan(plan, rateOffset), worker: false, requestId })
+        reject: reason => {
+          workerFallbackReason = reason instanceof Error ? "Worker 執行失敗，已切換主執行緒計算" : reason || "Worker 逾時，已切換主執行緒計算";
+          setWorkerStatus("fallback", workerFallbackReason);
+          resolve({ ...fallbackPayload(plan, options, workerFallbackReason), requestId });
+        }
       });
-      calcWorker.postMessage({ type: "CALCULATE", requestId, payload: { plan, rateOffset, requestId } });
+      calcWorker.postMessage({ type: "CALCULATE", requestId, payload: { plan, plans: state.plans, rateOffset, extraAnnual, rateCycles: plan.rateCycles || [], refinance: getRefiInput(plan), requestId } });
       window.setTimeout(() => {
         const pending = pendingCalcs.get(requestId);
         if (!pending) return;
         pendingCalcs.delete(requestId);
-        pending.reject();
-      }, 1200);
+        if (pendingCalcs.size > 12) pendingCalcs.clear();
+        pending.reject("Worker 逾時，已切換主執行緒計算");
+      }, 2500);
     });
+  };
+
+  const fallbackPayload = (plan, options = {}, reason = "") => {
+    const rateOffset = options.rateOffset || 0;
+    const extraAnnual = options.extraAnnual || 0;
+    const result = calculatePlan(plan, rateOffset);
+    return {
+      result,
+      stress: [0.5, 1, 2].map(offset => ({ offset, result: calculatePlan(plan, offset) })),
+      cashFlow: simulateAnnualCashFlow(result, plan),
+      optimizer: optimizePrepay(plan, extraAnnual),
+      rateSimulation: calculatePlan(planWithRateCycles(plan)),
+      refinance: calculateRefinance(getRefiInput(plan)),
+      comparison: buildComparison(state.plans),
+      worker: false,
+      fallbackReason: reason || "Worker 未回傳結果，已切換主執行緒計算"
+    };
   };
 
   const monthlyRateAt = (rates, monthIndex) => {
@@ -232,13 +279,9 @@ const App = (() => {
       const interest = roundMoney(balance * rate);
       const remainingAfterThis = totalMonths - month + 1;
       const inGrace = month <= graceMonths;
-      if (loan.method === "annuity" && (payment === 0 || (!lockedPayment && lastRate !== rate) || month === graceMonths + 1)) {
+      if (loan.method === "annuity" && (payment === 0 || lastRate !== rate || month === graceMonths + 1)) {
         payment = annuityPayment(balance, rate, remainingAfterThis);
       }
-      if (loan.method === "annuity" && loan.prepayMode === "shortenTerm" && prepayAhead(prepays, month) && !lockedPayment && !inGrace) {
-        lockedPayment = payment;
-      }
-      if (lockedPayment) payment = lockedPayment;
       lastRate = rate;
 
       let principal = 0;
@@ -249,6 +292,7 @@ const App = (() => {
           if (remainingAfterThis === 1 || balance < principal) principal = balance;
           pay = roundCurrency(principal + interest);
         } else {
+          if (lockedPayment) payment = lockedPayment;
           principal = roundCurrency(Math.min(balance, Math.max(0, payment - interest)));
           if (remainingAfterThis === 1 || balance < payment) principal = balance;
           pay = roundCurrency(principal + interest);
@@ -286,8 +330,6 @@ const App = (() => {
     }
     return { rows, errors };
   };
-
-  const prepayAhead = (prepays, month) => prepays.some(item => item.month === month);
 
   const calculatePlan = (plan, rateOffset = 0) => {
     const schedules = plan.loans.map(loan => buildSchedule(loan, rateOffset));
@@ -349,6 +391,48 @@ const App = (() => {
     };
   };
 
+  const getRefiInput = (plan = activePlan()) => {
+    const firstLoan = plan.loans?.[0] || {};
+    const oldRate = firstLoan.rates?.[0]?.rate || 2.1;
+    return {
+      balance: Number($("refiBalance")?.value) || firstLoan.amount || 0,
+      oldRate: Number($("refiOldRate")?.value) || oldRate,
+      oldYears: Number($("refiOldYears")?.value) || firstLoan.years || 25,
+      newRate: Number($("refiNewRate")?.value) || Math.max(0, oldRate - 0.2),
+      newYears: Number($("refiNewYears")?.value) || firstLoan.years || 30,
+      penalty: Number($("refiPenalty")?.value) || 0,
+      fee: Number($("refiFee")?.value) || 0
+    };
+  };
+
+  const calculateRefinance = (input) => {
+    const balance = roundCurrency(clamp(input.balance, 0));
+    const oldMonths = Math.round(clamp(input.oldYears, 1) * 12);
+    const newMonths = Math.round(clamp(input.newYears, 1) * 12);
+    const cost = roundCurrency(clamp(input.penalty, 0) + clamp(input.fee, 0));
+    const oldPay = annuityPayment(balance, (Number(input.oldRate) || 0) / 100 / 12, oldMonths);
+    const newPay = annuityPayment(balance, (Number(input.newRate) || 0) / 100 / 12, newMonths);
+    const oldInterest = roundCurrency(oldPay * oldMonths - balance);
+    const newInterest = roundCurrency(newPay * newMonths - balance);
+    const grossSaving = roundCurrency(oldInterest - newInterest);
+    const netSaving = roundCurrency(grossSaving - cost);
+    const monthlySaving = roundCurrency(oldPay - newPay);
+    return {
+      oldPay,
+      newPay,
+      oldInterest,
+      newInterest,
+      cost,
+      grossSaving,
+      netSaving,
+      monthlySaving,
+      breakEvenYears: monthlySaving > 0 && cost > 0 ? cost / monthlySaving / 12 : 0,
+      worth: grossSaving > cost
+    };
+  };
+
+  const buildComparison = (plans) => plans.map(plan => ({ plan: { id: plan.id, name: plan.name }, result: calculatePlan(plan) }));
+
   const planWithRateCycles = (plan) => {
     const cycles = [...(plan.rateCycles || [])]
       .map(item => ({ year: Math.max(1, Math.round(clamp(item.year, 1))), rate: Number(item.rate) || 0 }))
@@ -400,7 +484,16 @@ const App = (() => {
     return best;
   };
 
-  const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const save = () => {
+    const lightweight = clone(state);
+    lightweight.plans.forEach(plan => {
+      plan.compareScenarios = [];
+      plan.refinanceHistory = [];
+      plan.stressTestHistory = [];
+      plan.cashFlowSimulations = [];
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
+  };
   const load = () => {
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -418,6 +511,8 @@ const App = (() => {
     plan.stressTest ||= {};
     plan.compareScenarios ||= [];
     plan.refinanceHistory ||= [];
+    plan.stressTestHistory ||= [];
+    plan.cashFlowSimulations ||= [];
     return plan;
   };
 
@@ -459,6 +554,85 @@ const App = (() => {
     });
   };
 
+  const idbPutRecord = async (storeName, item) => {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, "readwrite");
+      tx.objectStore(storeName).put(item);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  };
+
+  const trimHistory = (items, limit = 50) => items
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, limit);
+
+  const saveHistoryRecord = (storeName, planField, record, signature) => {
+    if (!record || historySignatures[storeName] === signature) return;
+    historySignatures[storeName] = signature;
+    const plan = activePlan();
+    plan[planField] = trimHistory([record, ...(plan[planField] || [])]);
+    idbPutRecord(storeName, record).catch(() => {});
+  };
+
+  const syncHistoriesFromDb = async () => {
+    const plan = normalizePlan(activePlan());
+    const mapping = [
+      ["compareScenarios", "compareScenarios"],
+      ["refinanceHistory", "refinanceHistory"],
+      ["stressTestHistory", "stressTestHistory"],
+      ["cashFlowSimulations", "cashFlowSimulations"]
+    ];
+    await Promise.all(mapping.map(async ([store, field]) => {
+      try {
+        const items = await idbGetAll(store);
+        const scoped = items.filter(item => !item.planId || item.planId === plan.id);
+        if (scoped.length) plan[field] = trimHistory(scoped);
+      } catch {}
+    }));
+  };
+
+  const recordAnalysisHistory = (result, workerPayload = {}) => {
+    const now = new Date().toISOString();
+    const plan = activePlan();
+    const comparison = workerPayload.comparison || buildComparison(state.plans);
+    const stress = workerPayload.stress || [];
+    const cashFlow = workerPayload.cashFlow || simulateAnnualCashFlow(result);
+    const refinance = workerPayload.refinance || calculateRefinance(getRefiInput(plan));
+    saveHistoryRecord("compareScenarios", "compareScenarios", {
+      id: crypto.randomUUID(),
+      planId: plan.id,
+      name: `${plan.name} 比較 ${new Date().toLocaleString("zh-TW")}`,
+      plans: clone(state.plans),
+      summary: comparison.map(item => ({ name: item.plan.name, firstPayment: item.result.firstPayment, totalInterest: item.result.totalInterest, payoffDate: item.result.payoffDate })),
+      createdAt: now
+    }, JSON.stringify(comparison.map(item => [item.plan.name, item.result.firstPayment, item.result.totalInterest, item.result.payoffDate])));
+    saveHistoryRecord("stressTestHistory", "stressTestHistory", {
+      id: crypto.randomUUID(),
+      planId: plan.id,
+      name: `${plan.name} 壓力測試 ${new Date().toLocaleString("zh-TW")}`,
+      items: stress.map(item => ({ offset: item.offset, firstPayment: item.result.firstPayment, totalInterest: item.result.totalInterest })),
+      createdAt: now
+    }, JSON.stringify(stress.map(item => [item.offset, item.result.firstPayment, item.result.totalInterest])));
+    saveHistoryRecord("cashFlowSimulations", "cashFlowSimulations", {
+      id: crypto.randomUUID(),
+      planId: plan.id,
+      name: `${plan.name} 現金流 ${new Date().toLocaleString("zh-TW")}`,
+      inputs: clone(plan.cashFlow),
+      rows: clone(cashFlow),
+      createdAt: now
+    }, JSON.stringify(cashFlow.map(row => [row.year, row.income, row.mortgage, row.disposable, row.dsr])));
+    saveHistoryRecord("refinanceHistory", "refinanceHistory", {
+      id: crypto.randomUUID(),
+      planId: plan.id,
+      name: `${plan.name} 轉貸 ${new Date().toLocaleString("zh-TW")}`,
+      inputs: getRefiInput(plan),
+      result: clone(refinance),
+      createdAt: now
+    }, JSON.stringify([refinance.oldPay, refinance.newPay, refinance.oldInterest, refinance.newInterest, refinance.netSaving, refinance.breakEvenYears]));
+  };
+
   const loadSnapshotsFromStorage = () => {
     try {
       const items = JSON.parse(localStorage.getItem(SNAPSHOT_KEY));
@@ -498,7 +672,9 @@ const App = (() => {
       settings: { activePlan: state.activePlan, dsr: clone(plan.dsr) },
       compareScenarios: clone(state.plans),
       stressTest: clone(plan.stressTest),
+      stressTestHistory: clone(plan.stressTestHistory),
       cashFlow: clone(plan.cashFlow),
+      cashFlowSimulations: clone(plan.cashFlowSimulations),
       rateCycles: clone(plan.rateCycles),
       refinanceHistory: clone(plan.refinanceHistory),
       createdAt: now,
@@ -515,8 +691,10 @@ const App = (() => {
     activePlan().cashFlow = clone(snapshot.cashFlow || activePlan().cashFlow);
     activePlan().rateCycles = clone(snapshot.rateCycles || activePlan().rateCycles || []);
     activePlan().stressTest = clone(snapshot.stressTest || {});
+    activePlan().stressTestHistory = clone(snapshot.stressTestHistory || []);
     activePlan().compareScenarios = clone(snapshot.compareScenarios || []);
     activePlan().refinanceHistory = clone(snapshot.refinanceHistory || []);
+    activePlan().cashFlowSimulations = clone(snapshot.cashFlowSimulations || []);
   };
 
   const deleteSnapshot = (id) => saveSnapshots(loadSnapshots().filter(item => item.id !== id));
@@ -662,17 +840,18 @@ const App = (() => {
     const ctx = canvas.getContext("2d");
     const w = canvas.width;
     const h = canvas.height;
+    const plot = { left: 42, right: 18, top: 24, bottom: 44 };
     ctx.clearRect(0, 0, w, h);
     ctx.strokeStyle = "#d9dee7";
     ctx.lineWidth = 1;
     for (let i = 0; i < 4; i += 1) {
-      const y = 24 + i * ((h - 58) / 3);
-      ctx.beginPath(); ctx.moveTo(34, y); ctx.lineTo(w - 14, y); ctx.stroke();
+      const y = plot.top + i * ((h - plot.top - plot.bottom) / 3);
+      ctx.beginPath(); ctx.moveTo(plot.left, y); ctx.lineTo(w - plot.right, y); ctx.stroke();
     }
     const maxLen = Math.max(1, ...series.map(item => item.data.length));
     const max = Math.max(1, ...series.flatMap(item => item.data));
-    const xFor = i => 34 + (i / Math.max(1, maxLen - 1)) * (w - 52);
-    const yFor = v => h - 34 - (v / max) * (h - 68);
+    const xFor = i => plot.left + (i / Math.max(1, maxLen - 1)) * (w - plot.left - plot.right);
+    const yFor = v => h - plot.bottom - (v / max) * (h - plot.top - plot.bottom);
     series.forEach(item => {
       ctx.beginPath();
       item.data.forEach((v, i) => i ? ctx.lineTo(xFor(i), yFor(v)) : ctx.moveTo(xFor(i), yFor(v)));
@@ -681,13 +860,39 @@ const App = (() => {
       ctx.stroke();
     });
     series.forEach((item, index) => {
-      const x = 36 + index * 110;
+      const x = plot.left + index * 116;
       ctx.fillStyle = item.color;
       ctx.fillRect(x, h - 20, 14, 4);
       ctx.fillStyle = "#65717f";
       ctx.font = "12px Segoe UI";
-      ctx.fillText(item.name, x + 20, h - 14);
+      ctx.fillText(item.name.slice(0, 10), x + 20, h - 14);
     });
+    canvas.__chart = { series, plot, maxLen, max, xFor, yFor };
+  };
+
+  const bindChartTooltip = (canvas, labelPrefix = "月份") => {
+    const tooltip = $("chartTooltip");
+    if (!canvas || !tooltip || canvas.__tooltipBound) return;
+    canvas.__tooltipBound = true;
+    canvas.addEventListener("mousemove", event => {
+      const meta = canvas.__chart;
+      if (!meta) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const x = (event.clientX - rect.left) * scaleX;
+      const width = canvas.width - meta.plot.left - meta.plot.right;
+      const ratio = clamp((x - meta.plot.left) / Math.max(1, width), 0, 1);
+      const index = Math.round(ratio * Math.max(0, meta.maxLen - 1));
+      const lines = meta.series.map(item => {
+        const value = item.data[Math.min(index, item.data.length - 1)] || 0;
+        return `<div><i style="background:${item.color}"></i><span>${escapeHtml(item.name)}</span><strong>${money.format(value)}</strong></div>`;
+      }).join("");
+      tooltip.innerHTML = `<b>${labelPrefix} ${index + 1}</b>${lines}`;
+      tooltip.hidden = false;
+      tooltip.style.left = `${event.clientX + 14}px`;
+      tooltip.style.top = `${event.clientY + 14}px`;
+    });
+    canvas.addEventListener("mouseleave", () => { tooltip.hidden = true; });
   };
 
   const drawRatioChart = (canvas, rows) => {
@@ -710,9 +915,9 @@ const App = (() => {
     });
   };
 
-  const renderCharts = (result) => {
-    const annualCashFlow = simulateAnnualCashFlow(result);
-    const rateCycleResult = calculatePlan(planWithRateCycles(activePlan()));
+  const renderCharts = (result, workerPayload = {}) => {
+    const annualCashFlow = workerPayload.cashFlow || simulateAnnualCashFlow(result);
+    const rateCycleResult = workerPayload.rateSimulation || calculatePlan(planWithRateCycles(activePlan()));
     drawLineChart($("paymentChart"), result.combined.map(r => r.payment), "#1f6feb", true);
     drawRatioChart($("ratioChart"), result.combined);
     drawLineChart($("balanceChart"), result.combined.map(r => r.balance), "#147a42", false);
@@ -724,25 +929,33 @@ const App = (() => {
     drawLineChart($("rateCycleInterestChart"), rateCycleResult.combined.map((r, i) => rateCycleResult.combined.slice(0, i + 1).reduce((sum, row) => sum + row.interest, 0)), "#8f3a84", true);
   };
 
-  const renderStress = (result) => {
-    $("stressGrid").innerHTML = [0.5, 1, 2].map(offset => {
-      const stressed = calculatePlan(activePlan(), offset);
+  const renderStress = (result, stressItems = []) => {
+    if (!$("stressGrid")) return;
+    $("stressGrid").innerHTML = stressItems.map(item => {
+      const stressed = item.result;
       const diff = stressed.firstPayment - result.firstPayment;
       const pct = result.firstPayment ? diff / result.firstPayment * 100 : 0;
-      return `<article class="stress-card"><span>利率 +${offset}%</span><strong>${money.format(stressed.firstPayment)}</strong><span>增加 ${money.format(diff)} / ${pct.toFixed(1)}%</span></article>`;
+      return `<article class="stress-card"><span>利率 +${item.offset}%</span><strong>${money.format(stressed.firstPayment)}</strong><span>增加 ${money.format(diff)} / ${pct.toFixed(1)}%</span></article>`;
     }).join("");
   };
 
-  const renderPlans = () => {
+  const renderPlans = (comparisonPayload = null) => {
     $("planTabs").innerHTML = state.plans.map((plan, index) => `<button class="${index === state.activePlan ? "active" : ""}" data-plan="${index}">${escapeHtml(plan.name)}</button>`).join("");
-    const base = calculatePlan(state.plans[0]);
+    const comparison = comparisonPayload || buildComparison(state.plans);
+    const base = comparison[0]?.result || calculatePlan(state.plans[0]);
     const colors = ["#1f6feb", "#147a42", "#b42318", "#9a6700", "#5b5fc7"];
-    const planResults = state.plans.map(plan => calculatePlan(plan));
-    drawMultiLineChart($("comparePaymentChart"), state.plans.map((plan, index) => ({ name: plan.name, color: colors[index % colors.length], data: planResults[index].combined.map(row => row.payment) })));
-    drawMultiLineChart($("compareInterestChart"), state.plans.map((plan, index) => ({ name: plan.name, color: colors[index % colors.length], data: planResults[index].combined.map((row, rowIndex) => planResults[index].combined.slice(0, rowIndex + 1).reduce((sum, item) => sum + item.interest, 0)) })));
-    $("comparison").innerHTML = state.plans.map(plan => {
-      const result = calculatePlan(plan);
-      return `<article class="compare-card"><span>${escapeHtml(plan.name)}</span><strong>${money.format(result.firstPayment)}</strong><span>月付差 ${money.format(result.firstPayment - base.firstPayment)}</span><br><span>總利息差 ${money.format(result.totalInterest - base.totalInterest)}</span><br><span>清償 ${result.payoffDate}</span></article>`;
+    const makeSeries = mapper => comparison.map((item, index) => ({ name: item.plan.name, color: colors[index % colors.length], data: mapper(item) }));
+    drawMultiLineChart($("comparePaymentChart"), makeSeries(item => item.result.combined.map(row => row.payment)));
+    drawMultiLineChart($("compareInterestChart"), makeSeries(item => item.result.combined.map((row, rowIndex) => item.result.combined.slice(0, rowIndex + 1).reduce((sum, current) => sum + current.interest, 0))));
+    drawMultiLineChart($("compareBalanceChart"), makeSeries(item => item.result.combined.map(row => row.balance)));
+    drawMultiLineChart($("compareCashChart"), makeSeries(item => simulateAnnualCashFlow(item.result, item.plan).map(row => row.disposable)));
+    bindChartTooltip($("comparePaymentChart"), "月份");
+    bindChartTooltip($("compareInterestChart"), "月份");
+    bindChartTooltip($("compareBalanceChart"), "月份");
+    bindChartTooltip($("compareCashChart"), "年份");
+    $("comparison").innerHTML = comparison.map(item => {
+      const result = item.result;
+      return `<article class="compare-card"><span>${escapeHtml(item.plan.name)}</span><strong>${money.format(result.firstPayment)}</strong><span>月付差 ${money.format(result.firstPayment - base.firstPayment)}</span><br><span>總利息差 ${money.format(result.totalInterest - base.totalInterest)}</span><br><span>清償 ${result.payoffDate}</span></article>`;
     }).join("");
   };
 
@@ -774,8 +987,8 @@ const App = (() => {
     $("dsrLevel").className = `dsr-level ${level[1]}`;
   };
 
-  const simulateAnnualCashFlow = (result) => {
-    const plan = activePlan();
+  const simulateAnnualCashFlow = (result, sourcePlan = activePlan()) => {
+    const plan = sourcePlan;
     const cashFlow = plan.cashFlow || {};
     const years = Math.max(1, Math.ceil(result.combined.length / 12));
     return Array.from({ length: years }, (_, index) => {
@@ -819,22 +1032,31 @@ const App = (() => {
     renderLoanList();
     const planSnapshot = clone(activePlan());
     const requestId = ++calcRequestId;
-    const payload = await calculatePlanAsync(planSnapshot);
+    const payload = await calculatePlanAsync(planSnapshot, { extraAnnual: Number($("extraAnnualInput")?.value) || 0 });
     if (payload.requestId && payload.requestId < latestAppliedRequestId) return;
     latestAppliedRequestId = payload.requestId || requestId;
     const workerResult = payload.result || calculatePlan(planSnapshot);
+    if (payload.worker) setWorkerStatus("ready", "Worker 計算啟用");
+    else setWorkerStatus("fallback", payload.fallbackReason || "Worker fallback：目前使用主執行緒計算");
     renderSummary(workerResult);
     renderDsr(workerResult);
     renderSchedule(workerResult.combined);
-    renderCharts(workerResult);
-    renderPlans();
-    renderSimplePanels(workerResult);
+    renderCharts(workerResult, payload);
+    renderPlans(payload.comparison);
+    renderStress(workerResult, payload.stress || []);
+    renderSimplePanels(workerResult, payload);
+    recordAnalysisHistory(workerResult, payload);
     save();
     updateHistoryButtons();
   };
 
-  const renderSimplePanels = (result) => {
-    const annualCashFlow = simulateAnnualCashFlow(result);
+  const scheduleRender = (options = {}) => {
+    window.clearTimeout(renderTimer);
+    renderTimer = window.setTimeout(() => render(options), options.delay ?? 120);
+  };
+
+  const renderSimplePanels = (result, workerPayload = {}) => {
+    const annualCashFlow = workerPayload.cashFlow || simulateAnnualCashFlow(result);
     const cashRisk = annualCashFlow.some(row => row.dsr > 60);
     if ($("cashRiskBadge")) {
       $("cashRiskBadge").textContent = cashRisk ? "高風險現金流" : "可控";
@@ -862,7 +1084,7 @@ const App = (() => {
       `).join("");
     }
     if ($("optimizerResult")) {
-      const best = optimizePrepay(activePlan(), Number($("extraAnnualInput")?.value) || 0);
+      const best = workerPayload.optimizer || optimizePrepay(activePlan(), Number($("extraAnnualInput")?.value) || 0);
       $("optimizerResult").innerHTML = `
         <article class="result-card"><span>最佳提前還款年份</span><strong>${best.year === "-" ? "-" : `第 ${best.year} 年`}</strong><span>${escapeHtml(best.strategy)}</span></article>
         <article class="result-card"><span>預估節省</span><strong>${money.format(best.saving)}</strong><span>相對目前方案總利息</span></article>
@@ -872,7 +1094,7 @@ const App = (() => {
         <article class="result-card"><span>新清償日期</span><strong>${escapeHtml(prepayImpact.payoffDate)}</strong><span>重算後日期</span></article>
       `;
     }
-    if ($("refiResult")) renderRefi();
+    if ($("refiResult")) renderRefi(workerPayload.refinance);
     if ($("snapshotList")) {
       const snapshots = loadSnapshots();
       $("snapshotList").innerHTML = snapshots.length ? snapshots.map(item => `
@@ -890,25 +1112,8 @@ const App = (() => {
     }
   };
 
-  const renderRefi = () => {
-    const firstLoan = activePlan().loans[0] || {};
-    const balance = roundCurrency(Number($("refiBalance")?.value) || firstLoan.amount || 0);
-    const oldRateValue = Number($("refiOldRate")?.value) || firstLoan.rates?.[0]?.rate || 2.1;
-    const newRateValue = Number($("refiNewRate")?.value) || Math.max(0, oldRateValue - 0.2);
-    const oldMonths = Math.round(clamp(Number($("refiOldYears")?.value) || firstLoan.years || 25, 1) * 12);
-    const newMonths = Math.round(clamp(Number($("refiNewYears")?.value) || firstLoan.years || 30, 1) * 12);
-    const penalty = roundCurrency(Number($("refiPenalty")?.value) || 0);
-    const fee = roundCurrency(Number($("refiFee")?.value) || 0);
-    const cost = roundCurrency(penalty + fee);
-    const oldPay = annuityPayment(balance, oldRateValue / 100 / 12, oldMonths);
-    const newPay = annuityPayment(balance, newRateValue / 100 / 12, newMonths);
-    const oldInterest = roundCurrency(oldPay * oldMonths - balance);
-    const newInterest = roundCurrency(newPay * newMonths - balance);
-    const grossSaving = roundCurrency(oldInterest - newInterest);
-    const netSaving = roundCurrency(grossSaving - cost);
-    const monthlySaving = roundCurrency(oldPay - newPay);
-    const breakEvenYears = monthlySaving > 0 && cost > 0 ? cost / monthlySaving / 12 : 0;
-    const worth = grossSaving > cost;
+  const renderRefi = (refi = calculateRefinance(getRefiInput())) => {
+    const { oldPay, newPay, oldInterest, newInterest, cost, netSaving, breakEvenYears, worth } = refi;
     $("refiBadge").textContent = worth ? "值得轉貸" : "不建議轉貸";
     $("refiBadge").className = `badge ${worth ? "safe" : "warn"}`;
     $("refiResult").innerHTML = `
@@ -929,7 +1134,7 @@ const App = (() => {
     $("addLoanBtn").addEventListener("click", () => {
       pushHistory();
       activePlan().loans.push(defaultLoan(`房貸 ${activePlan().loans.length + 1}`));
-      render();
+      scheduleRender();
     });
     $("addPlanBtn").addEventListener("click", () => {
       pushHistory();
@@ -939,20 +1144,20 @@ const App = (() => {
       clone.loans.forEach(loan => loan.id = crypto.randomUUID());
       state.plans.push(clone);
       state.activePlan = state.plans.length - 1;
-      render();
+      scheduleRender();
     });
     $("resetBtn").addEventListener("click", () => {
       pushHistory();
       localStorage.removeItem(STORAGE_KEY);
       state.activePlan = 0;
-      state.plans = [{ id: crypto.randomUUID(), name: "方案 A", loans: [defaultLoan("主要房貸")], dsr: { income: 90000, creditLoan: 0, carLoan: 0, cardDebt: 0 }, cashFlow: { bonus: 0, growth: 2, etf: 10000, rent: 0, child: 0 }, rateCycles: [{ year: 1, rate: 2.1 }, { year: 3, rate: 2.5 }, { year: 6, rate: 2.2 }], stressTest: {}, compareScenarios: [], refinanceHistory: [] }];
-      render();
+      state.plans = [{ id: crypto.randomUUID(), name: "方案 A", loans: [defaultLoan("主要房貸")], dsr: { income: 90000, creditLoan: 0, carLoan: 0, cardDebt: 0 }, cashFlow: { bonus: 0, growth: 2, etf: 10000, rent: 0, child: 0 }, rateCycles: [{ year: 1, rate: 2.1 }, { year: 3, rate: 2.5 }, { year: 6, rate: 2.2 }], stressTest: {}, compareScenarios: [], refinanceHistory: [], stressTestHistory: [], cashFlowSimulations: [] }];
+      scheduleRender();
     });
     $("templateSelect").addEventListener("change", event => {
       pushHistory();
       applyBankTemplate(event.target.value);
       event.target.value = "";
-      render();
+      scheduleRender();
     });
     ["saveSnapshotBtn", "loadSnapshotBtn", "createSnapshotBtn"].forEach(id => {
       const button = $(id);
@@ -968,7 +1173,7 @@ const App = (() => {
           if (first) loadSnapshot(first.id);
         }
         save();
-        render();
+        scheduleRender();
       });
     });
     $("undoBtn").addEventListener("click", undo);
@@ -987,14 +1192,14 @@ const App = (() => {
     $("loanList").addEventListener("input", event => {
       const loan = findLoan(event.target);
       if (!loan) return;
-      pushHistory();
+      pushInputHistory();
       const field = event.target.dataset.field;
       if (field) loan[field] = event.target.type === "number" ? Number(event.target.value) : event.target.value;
       const rateField = event.target.dataset.rateField;
       if (rateField) loan.rates[Number(event.target.closest("[data-rate]").dataset.rate)][rateField] = Number(event.target.value);
       const prepayField = event.target.dataset.prepayField;
       if (prepayField) loan.prepays[Number(event.target.closest("[data-prepay]").dataset.prepay)][prepayField] = Number(event.target.value);
-      render();
+      scheduleRender();
     });
     $("loanList").addEventListener("click", event => {
       const action = event.target.dataset.action;
@@ -1011,23 +1216,23 @@ const App = (() => {
       if (action === "addPrepay") loan.prepays.push({ month: 12, amount: 100000 });
       if (action === "deletePrepay") loan.prepays.splice(Number(event.target.closest("[data-prepay]").dataset.prepay), 1);
       if (!activePlan().loans.length) activePlan().loans.push(defaultLoan("主要房貸"));
-      render();
+      scheduleRender();
     });
     ["incomeInput", "creditLoanInput", "carLoanInput", "cardDebtInput"].forEach(id => {
       $(id).addEventListener("input", () => {
-        pushHistory();
+        pushInputHistory();
         activePlan().dsr = {
           income: Number($("incomeInput").value),
           creditLoan: Number($("creditLoanInput").value),
           carLoan: Number($("carLoanInput").value),
           cardDebt: Number($("cardDebtInput").value)
         };
-        render();
+        scheduleRender();
       });
     });
     ["bonusInput", "growthInput", "etfInput", "rentInput", "childInput"].forEach(id => {
       $(id).addEventListener("input", () => {
-        pushHistory();
+        pushInputHistory();
         activePlan().cashFlow = {
           bonus: Number($("bonusInput").value),
           growth: Number($("growthInput").value),
@@ -1035,14 +1240,14 @@ const App = (() => {
           rent: Number($("rentInput").value),
           child: Number($("childInput").value)
         };
-        render();
+        scheduleRender();
       });
     });
     ["extraAnnualInput", "refiBalance", "refiOldRate", "refiOldYears", "refiNewRate", "refiNewYears", "refiPenalty", "refiFee"].forEach(id => {
       const input = $(id);
       if (input) input.addEventListener("input", () => {
-        pushHistory();
-        render();
+        pushInputHistory();
+        scheduleRender();
       });
     });
     $("addRateCycleBtn").addEventListener("click", () => {
@@ -1051,22 +1256,22 @@ const App = (() => {
       const last = cycles.at(-1) || { year: 1, rate: activePlan().loans[0]?.rates?.[0]?.rate || 2.1 };
       cycles.push({ year: last.year + 1, rate: last.rate });
       activePlan().rateCycles = cycles;
-      render();
+      scheduleRender();
     });
     $("rateCycleList").addEventListener("input", event => {
       const row = event.target.closest("[data-rate-cycle]");
       const field = event.target.dataset.rateCycleField;
       if (!row || !field) return;
-      pushHistory();
+      pushInputHistory();
       activePlan().rateCycles[Number(row.dataset.rateCycle)][field] = Number(event.target.value);
-      render();
+      scheduleRender();
     });
     $("rateCycleList").addEventListener("click", event => {
       const row = event.target.closest("[data-rate-cycle]");
       if (!row || event.target.dataset.rateCycleAction !== "delete") return;
       pushHistory();
       activePlan().rateCycles.splice(Number(row.dataset.rateCycle), 1);
-      render();
+      scheduleRender();
     });
     $("snapshotList").addEventListener("click", event => {
       const action = event.target.dataset.snapshotAction;
@@ -1078,18 +1283,18 @@ const App = (() => {
       if (action === "copy") copySnapshot(id);
       if (action === "delete") deleteSnapshot(id);
       save();
-      render();
+      scheduleRender();
     });
     $("planTabs").addEventListener("click", event => {
       if (event.target.dataset.plan) {
         pushHistory();
         state.activePlan = Number(event.target.dataset.plan);
-        render();
+        scheduleRender();
       }
     });
     $("copyTableBtn").addEventListener("click", async () => {
       const rows = calculatePlan(activePlan()).combined;
-      const text = [["月份", "日期", "月付", "本金", "利息", "剩餘本金"], ...rows.map(r => [r.month, r.date, r.payment, r.principal, r.interest, r.balance])].map(r => r.join("\t")).join("\n");
+      const text = [["月份", "日期", "月付", "本金", "利息", "提前還款", "剩餘本金"], ...rows.map(r => [r.month, r.date, r.payment, r.principal, r.interest, r.prepay, r.balance])].map(r => r.join("\t")).join("\n");
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
         return;
@@ -1105,7 +1310,7 @@ const App = (() => {
     });
     $("csvBtn").addEventListener("click", () => {
       const rows = calculatePlan(activePlan()).combined;
-      const csv = "\ufeff" + [["月份", "日期", "月付", "本金", "利息", "剩餘本金"], ...rows.map(r => [r.month, r.date, r.payment, r.principal, r.interest, r.balance])].map(r => r.join(",")).join("\n");
+      const csv = "\ufeff" + [["月份", "日期", "月付", "本金", "利息", "提前還款", "剩餘本金"], ...rows.map(r => [r.month, r.date, r.payment, r.principal, r.interest, r.prepay, r.balance])].map(r => r.join(",")).join("\n");
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const link = document.createElement("a");
       link.href = url;
@@ -1121,13 +1326,16 @@ const App = (() => {
   const init = async () => {
     load();
     await syncSnapshotsFromDb();
+    await syncHistoriesFromDb();
     initWorker();
     bindEvents();
     pushHistory();
-    render();
+    scheduleRender();
   };
 
   return { init };
 })();
 
 document.addEventListener("DOMContentLoaded", App.init);
+
+

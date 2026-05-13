@@ -72,6 +72,22 @@ label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; min-width
 }
 .topbar h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
 .topbar p { margin: 4px 0 0; color: var(--muted); }
+.worker-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.worker-status.ready { color: var(--safe); border-color: rgba(18, 107, 67, .45); }
+.worker-status.fallback { color: var(--warn); border-color: rgba(154, 103, 0, .45); background: rgba(154, 103, 0, .08); }
+.worker-status.error { color: var(--risk); border-color: rgba(180, 35, 24, .45); background: rgba(180, 35, 24, .08); }
 .toolbar, .section-actions, .snapshot-bar, .snapshot-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .toolbar button { min-width: 76px; }
 
@@ -125,7 +141,8 @@ canvas { width: 100%; height: 240px; border: 1px solid var(--line); border-radiu
 .chart-tooltip {
   position: fixed;
   z-index: 20;
-  max-width: 240px;
+  min-width: 220px;
+  max-width: 300px;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -135,6 +152,16 @@ canvas { width: 100%; height: 240px; border: 1px solid var(--line); border-radiu
   font-size: 12px;
   pointer-events: none;
 }
+.chart-tooltip b { display: block; margin-bottom: 6px; }
+.chart-tooltip div {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 7px;
+  align-items: center;
+  margin-top: 4px;
+}
+.chart-tooltip i { width: 10px; height: 10px; border-radius: 50%; }
+.chart-tooltip strong { font-size: 12px; font-weight: 700; }
 
 .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .tabs button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
@@ -143,7 +170,7 @@ canvas { width: 100%; height: 240px; border: 1px solid var(--line); border-radiu
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
 }
-.compare-card, .result-card, .risk-card, .snapshot-card {
+.compare-card, .result-card, .risk-card, .snapshot-card, .stress-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
@@ -152,8 +179,8 @@ canvas { width: 100%; height: 240px; border: 1px solid var(--line); border-radiu
 .snapshot-card { display: grid; gap: 8px; }
 .snapshot-actions button { min-height: 30px; padding: 4px 8px; font-size: 12px; }
 .cash-flow-summary { margin-top: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.compare-card strong, .result-card strong { display: block; margin: 4px 0; font-size: 16px; }
-.compare-card span, .result-card span, .risk-card span, .snapshot-card span { color: var(--muted); font-size: 12px; }
+.compare-card strong, .result-card strong, .stress-card strong { display: block; margin: 4px 0; font-size: 16px; }
+.compare-card span, .result-card span, .risk-card span, .snapshot-card span, .stress-card span { color: var(--muted); font-size: 12px; }
 .risk-card { display: grid; gap: 7px; }
 .risk-card div { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .risk-card p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text); }

@@ -12,6 +12,7 @@
       <div>
         <h1>HomeLoan</h1>
         <p>專業房貸、轉貸、現金流、風險與 Scenario Snapshot 規劃工具</p>
+        <div id="workerStatus" class="worker-status" role="status" aria-live="polite">計算引擎啟動中</div>
       </div>
       <div class="toolbar" aria-label="工具列">
         <button id="addLoanBtn" class="primary">新增貸款</button>
@@ -116,8 +117,15 @@
           <div class="charts compare-charts">
             <div><h3>多方案月付曲線</h3><canvas id="comparePaymentChart" width="640" height="240"></canvas></div>
             <div><h3>多方案累積利息</h3><canvas id="compareInterestChart" width="640" height="240"></canvas></div>
+            <div><h3>多方案剩餘本金</h3><canvas id="compareBalanceChart" width="640" height="240"></canvas></div>
+            <div><h3>多方案現金流</h3><canvas id="compareCashChart" width="640" height="240"></canvas></div>
           </div>
           <div id="comparison" class="comparison"></div>
+        </section>
+
+        <section class="panel">
+          <h2>壓力測試</h2>
+          <div id="stressGrid" class="result-grid"></div>
         </section>
 
         <section class="panel">

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ETF 投資模擬器</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="control-panel" aria-label="投資參數">
+        <h1 data-i18n="appTitle"></h1>
+        <form id="controls" class="form-grid">
+          <label>
+            <span data-i18n="initialAmount"></span>
+            <input id="initialAmount" type="number" min="0" step="1000" value="100000">
+          </label>
+          <label>
+            <span data-i18n="monthlyContribution"></span>
+            <input id="monthlyContribution" type="number" min="0" step="1000" value="10000">
+          </label>
+          <label>
+            <span data-i18n="years"></span>
+            <input id="years" type="number" min="1" max="50" step="1" value="20">
+          </label>
+          <label>
+            <span data-i18n="annualReturn"></span>
+            <input id="annualReturn" type="number" min="-50" max="50" step="0.1" value="8">
+          </label>
+          <label>
+            <span data-i18n="volatility"></span>
+            <input id="volatility" type="number" min="0" max="80" step="0.1" value="16">
+          </label>
+          <label>
+            <span data-i18n="dividendYield"></span>
+            <input id="dividendYield" type="number" min="0" max="20" step="0.1" value="2">
+          </label>
+          <label>
+            <span data-i18n="simulations"></span>
+            <input id="simulations" type="number" min="100" max="5000" step="100" value="1000">
+          </label>
+          <div class="button-row" role="group" aria-label="情境預設">
+            <button type="button" data-preset="conservative" data-i18n="conservative"></button>
+            <button type="button" data-preset="balanced" data-i18n="balanced"></button>
+            <button type="button" data-preset="aggressive" data-i18n="aggressive"></button>
+            <button type="button" data-preset="crisis" data-i18n="crisis"></button>
+          </div>
+          <button type="button" id="runMonteCarlo" class="primary-action" data-i18n="runSimulation"></button>
+        </form>
+      </aside>
+      <section class="workspace">
+        <section class="kpi-grid" aria-label="風險指標">
+          <article><span data-i18n="finalValue"></span><strong id="finalValue">NT$ 0</strong></article>
+          <article><span data-i18n="cagr"></span><strong id="cagr">0.00%</strong></article>
+          <article><span data-i18n="maxDrawdown"></span><strong id="maxDrawdown">0.00%</strong></article>
+          <article><span data-i18n="sharpeRatio"></span><strong id="sharpeRatio">0.00</strong></article>
+        </section>
+        <section class="chart-area" aria-label="資產走勢">
+          <canvas id="chartCanvas"></canvas>
+          <div id="tooltip" class="tooltip" hidden></div>
+        </section>
+        <section class="analysis-grid">
+          <article>
+            <h2 data-i18n="analysis"></h2>
+            <p id="summary" data-i18n="emptyState"></p>
+          </article>
+          <article>
+            <h2 data-i18n="monteCarlo"></h2>
+            <progress id="progress" max="100" value="0"></progress>
+            <p id="workerStatus">待執行</p>
+            <dl class="mc-grid" aria-label="蒙地卡羅模擬結果">
+              <div><dt>P10</dt><dd id="mcP10">-</dd></div>
+              <div><dt>P25</dt><dd id="mcP25">-</dd></div>
+              <div><dt>中位數</dt><dd id="mcP50">-</dd></div>
+              <div><dt>P75</dt><dd id="mcP75">-</dd></div>
+              <div><dt>P90</dt><dd id="mcP90">-</dd></div>
+              <div><dt>最佳情境</dt><dd id="mcBest">-</dd></div>
+              <div><dt>最差情境</dt><dd id="mcWorst">-</dd></div>
+              <div><dt>成功率</dt><dd id="mcSuccess">-</dd></div>
+            </dl>
+          </article>
+          <article id="debugPanel" hidden>
+            <h2 data-i18n="debug"></h2>
+            <p id="debugOutput"></p>
+          </article>
+        </section>
+      </section>
+    </main>
+    <script src="i18n.js"></script>
+    <script src="historicalData.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

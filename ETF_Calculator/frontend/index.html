@@ -46,6 +46,7 @@
             <button type="button" data-preset="crisis" data-i18n="crisis"></button>
           </div>
           <button type="button" id="runMonteCarlo" class="primary-action" data-i18n="runSimulation"></button>
+          <button type="button" id="exportPng" data-i18n="exportPng"></button>
         </form>
       </aside>
       <section class="workspace">
@@ -63,6 +64,15 @@
           <article>
             <h2 data-i18n="analysis"></h2>
             <p id="summary" data-i18n="emptyState"></p>
+          </article>
+          <article>
+            <h2 data-i18n="historicalReplay"></h2>
+            <dl class="mc-grid" aria-label="歷史回測結果">
+              <div><dt data-i18n="yearRange"></dt><dd id="historicalYears">-</dd></div>
+              <div><dt data-i18n="finalValue"></dt><dd id="historicalFinal">-</dd></div>
+              <div><dt data-i18n="cagr"></dt><dd id="historicalCagr">-</dd></div>
+              <div><dt data-i18n="maxDrawdown"></dt><dd id="historicalDrawdown">-</dd></div>
+            </dl>
           </article>
           <article>
             <h2 data-i18n="monteCarlo"></h2>
@@ -88,6 +98,20 @@
     </main>
     <script src="i18n.js"></script>
     <script src="historicalData.js"></script>
+    <script src="state/appState.js"></script>
+    <script src="state/urlState.js"></script>
+    <script src="core/compoundGrowth.js"></script>
+    <script src="core/monteCarlo.js"></script>
+    <script src="core/historicalReplay.js"></script>
+    <script src="charts/ChartRenderer.js"></script>
+    <script src="export/pngExport.js"></script>
+    <script src="ui/formatters.js"></script>
+    <script src="ui/inputs.js"></script>
+    <script src="ui/presets.js"></script>
+    <script src="ui/dashboardView.js"></script>
+    <script src="ui/chartInteractions.js"></script>
+    <script src="ui/monteCarloPanel.js"></script>
+    <script src="ui/exportPanel.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

@@ -1,7 +1,11 @@
 # Testing
 
-- Backend unit tests：`backend/tests/test_simulation_service.py`
-- Frontend unit tests：`frontend/lib/finance/financial-engine.test.ts`
-- Integration criteria：frontend API client payload must match backend simulation schema
-- Debug mode：`debug=true` 顯示 FPS、render timing、simulation timing、worker status
-- Failure recovery：simulation error 不得造成 blank screen、chart freeze、app crash
+- Unit tests：`npm test`
+- Browser smoke：`npm run test:browser`
+- Core coverage：compound growth, risk metrics, Monte Carlo batching, historical replay
+- State coverage：legacy migration, canonical derived dataset update
+- URL coverage：load and save round-trip fields
+- Export coverage：PNG download link generation
+- Error recovery：worker failure writes `ui.error`
+- Browser smoke coverage：file:// render, canvas size, historical replay UI, Monte Carlo completion, console errors
+- Offline criteria：file:// works, no CDN, no fetch(), no backend, no console errors

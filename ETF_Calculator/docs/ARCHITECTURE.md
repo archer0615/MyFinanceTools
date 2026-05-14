@@ -1,23 +1,33 @@
 # ETF 投資模擬器架構
 
-- UI Layer：`frontend/index.html`、`frontend/style.css`
-- State Layer：`frontend/script.js` central state
-- Simulation Layer：financial engine、historical replay、monte carlo worker
-- Render Layer：canvas renderer、tooltip、crosshair
-- Storage Layer：URLSearchParams、localStorage
+- Orchestration：`frontend/script.js`
+- Core：`frontend/core/` pure calculation and simulation logic
+- State：`frontend/state/` canonical state, localStorage, URL sync
+- Charts：`frontend/charts/` stateless canvas renderer
+- UI：`frontend/ui/` DOM bindings and view updates
+- Export：`frontend/export/` PNG export
 
-## Repository Pattern
+## Canonical Data Flow
 
-- `createRepository(storageKey)` 封裝 `localStorage`
-- UI 不直接存取 storage
-- State update 後由 repository persist
+- Input
+- State
+- Simulation
+- Derived Dataset
+- Renderer
+- Export
 
-## Service Layer
+## State Shape
 
-- `createServiceLayer(stateManager)` 封裝 state mutation
-- UI 只能呼叫 service
-- simulation engine 回傳 pure result
+- `investment`
+- `simulations`
+- `charts`
+- `presets`
+- `ui`
+- `export`
 
-## Backend Boundary
+## Notes
 
-Reference `02_CODING_RULES.md` 禁止 backend 與 API，因此 `backend/` 僅保留架構邊界文件，不啟動服務。
+- `frontend/historicalData.js` feeds `frontend/core/historicalReplay.js` and stores output in `state.simulations.historicalReplay`.
+- Historical replay is rendered in its own UI block through `frontend/ui/dashboardView.js`.
+- Worker Monte Carlo uses `frontend/core/monteCarlo.js` through `importScripts`.
+- `frontend/script.js` should remain orchestration-only.

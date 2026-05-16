@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mortgage Refinance</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #607084;
+      --line: #d7dee8;
+      --panel: #f7f9fc;
+      --accent: #0f766e;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --white: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      color: var(--ink);
+      background: #eef3f8;
+      padding-bottom: 86px;
+    }
+
+    header, main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 28px 0 18px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    h3 {
+      margin: 18px 0 10px;
+      font-size: 15px;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--ink);
+      min-height: 38px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--white);
+      font-weight: 700;
+    }
+
+    a.nav-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--ink);
+      padding: 8px 12px;
+      text-decoration: none;
+    }
+
+    button.danger { color: var(--danger); }
+
+    input, select {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 9px;
+      font: inherit;
+      background: var(--white);
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+      gap: 18px;
+      padding-bottom: 36px;
+    }
+
+    section {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .stack { display: grid; gap: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .wide { grid-column: 1 / -1; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .floating-actions {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 12px 28px rgba(23, 33, 43, 0.14);
+    }
+
+    .floating-actions .primary {
+      min-width: 112px;
+    }
+
+    .loan {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--panel);
+    }
+
+    .loan-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .loan-title { font-weight: 700; }
+
+    .segment-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+      margin-top: 8px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--panel);
+      min-width: 0;
+    }
+
+    .metric span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 20px;
+      overflow-wrap: anywhere;
+    }
+
+    .message {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #f8fbfa;
+    }
+
+    .message.warn { border-left-color: var(--warn); }
+    .message.danger { border-left-color: var(--danger); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th:first-child, td:first-child { text-align: left; }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 460px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      overflow: hidden;
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 12px;
+      font-weight: 700;
+      background: var(--panel);
+    }
+
+    details .table-wrap {
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+    }
+
+    .errors {
+      color: var(--danger);
+      margin: 0;
+      padding-left: 18px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 920px) {
+      main { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 560px) {
+      header { align-items: start; flex-direction: column; }
+      .grid, .summary { grid-template-columns: 1fr; }
+      .segment-row { grid-template-columns: 1fr; }
+      .floating-actions {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+      }
+      .floating-actions .primary,
+      .floating-actions .nav-button {
+        flex: 1;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Mortgage Refinance</h1>
+      <div>房貸轉貸 deterministic calculator</div>
+    </div>
+    <div class="actions">
+      <button id="addLoanButton" type="button">新增既有貸款</button>
+    </div>
+  </header>
+
+  <nav class="floating-actions" aria-label="快速操作">
+    <a class="nav-button" href="../index.html">回到首頁</a>
+    <button id="calculateButton" class="primary" type="button">計算</button>
+  </nav>
+
+  <main>
+    <section class="stack">
+      <h2>輸入</h2>
+      <div id="existingLoans"></div>
+
+      <section class="loan">
+        <div class="loan-head">
+          <div class="loan-title">轉貸方案</div>
+        </div>
+        <div class="grid">
+          <label>貸款金額
+            <input data-path="refinanceLoan.principal" inputmode="decimal" type="number" min="0" step="1">
+          </label>
+          <label>期數（月）
+            <input data-path="refinanceLoan.months" inputmode="numeric" type="number" min="1" step="1">
+          </label>
+          <label>轉貸成本
+            <input data-path="refinanceCosts.totalCost" inputmode="decimal" type="number" min="0" step="1">
+          </label>
+          <label>寬限或手續註記
+            <input data-path="refinanceLoan.note" type="text">
+          </label>
+        </div>
+        <h3>利率區段</h3>
+        <div id="refinanceSegments"></div>
+        <button id="addRefinanceSegmentButton" type="button">新增利率區段</button>
+      </section>
+    </section>
+
+    <section class="stack">
+      <h2>結果</h2>
+      <div id="status"></div>
+      <div class="summary" id="summary"></div>
+      <div id="breakEven"></div>
+      <div id="details"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "mortgageRefinanceState.v1";
+
+    const roundingPolicy = Object.freeze({
+      currency(value) {
+        return Math.round(Number(value));
+      },
+      rate(value) {
+        return Number(value) / 100 / 12;
+      }
+    });
+
+    const defaultState = Object.freeze({
+      existingLoans: [
+        {
+          id: "loan-1",
+          name: "既有貸款 1",
+          principal: 8000000,
+          months: 240,
+          segments: [{ months: 240, annualRate: 2.1 }]
+        }
+      ],
+      refinanceLoan: {
+        principal: 8000000,
+        months: 240,
+        note: "",
+        segments: [{ months: 240, annualRate: 1.95 }]
+      },
+      refinanceCosts: { totalCost: 120000 },
+      calculationResults: {},
+      uiState: { expanded: {} }
+    });
+
+    let appState = clone(defaultState);
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function calculateMonthlyPayment(principal, monthlyRate, months) {
+      if (monthlyRate === 0) {
+        return roundingPolicy.currency(principal / months);
+      }
+      const numerator = principal * monthlyRate;
+      const denominator = 1 - Math.pow(1 + monthlyRate, -months);
+      return roundingPolicy.currency(numerator / denominator);
+    }
+
+    function normalizePositiveNumber(value) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    }
+
+    function validateSegments(segments, totalMonths, label) {
+      const errors = [];
+      let monthSum = 0;
+      if (!Array.isArray(segments) || segments.length === 0) {
+        return [`${label} 必須至少有一個利率區段`];
+      }
+      segments.forEach((segment, index) => {
+        const months = normalizePositiveNumber(segment.months);
+        const annualRate = normalizePositiveNumber(segment.annualRate);
+        if (!Number.isInteger(months) || months <= 0) errors.push(`${label} 第 ${index + 1} 段期數必須為正整數`);
+        if (!Number.isFinite(annualRate) || annualRate < 0) errors.push(`${label} 第 ${index + 1} 段利率不可為負`);
+        monthSum += Number.isFinite(months) ? months : 0;
+      });
+      if (monthSum !== totalMonths) errors.push(`${label} 利率區段總期數 ${monthSum} 必須等於貸款期數 ${totalMonths}`);
+      return errors;
+    }
+
+    function validateLoan(loan, label) {
+      const errors = [];
+      const principal = normalizePositiveNumber(loan.principal);
+      const months = normalizePositiveNumber(loan.months);
+      if (!Number.isFinite(principal) || principal <= 0) errors.push(`${label} 貸款金額必須大於 0`);
+      if (!Number.isInteger(months) || months <= 0) errors.push(`${label} 期數必須為正整數`);
+      return errors.concat(validateSegments(loan.segments, months, label));
+    }
+
+    function validateState(state) {
+      const errors = [];
+      if (!Array.isArray(state.existingLoans) || state.existingLoans.length === 0) errors.push("至少需要一筆既有貸款");
+      state.existingLoans.forEach((loan, index) => errors.push(...validateLoan(loan, `既有貸款 ${index + 1}`)));
+      errors.push(...validateLoan(state.refinanceLoan, "轉貸方案"));
+      const totalCost = normalizePositiveNumber(state.refinanceCosts.totalCost);
+      if (!Number.isFinite(totalCost) || totalCost < 0) errors.push("轉貸成本不可為負");
+      return errors;
+    }
+
+    function amortizeLoan(loan) {
+      let balance = roundingPolicy.currency(loan.principal);
+      let cumulativeInterest = 0;
+      let elapsedMonths = 0;
+      const rows = [];
+
+      loan.segments.forEach((segment, segmentIndex) => {
+        const monthlyRate = roundingPolicy.rate(segment.annualRate);
+        const remainingMonthsAtSegmentStart = loan.months - elapsedMonths;
+        const payment = calculateMonthlyPayment(balance, monthlyRate, remainingMonthsAtSegmentStart);
+
+        for (let i = 1; i <= segment.months; i += 1) {
+          const month = elapsedMonths + i;
+          const interest = roundingPolicy.currency(balance * monthlyRate);
+          let principalPayment = payment - interest;
+          if (i === segment.months && segmentIndex === loan.segments.length - 1) {
+            principalPayment = balance;
+          }
+          if (principalPayment > balance) principalPayment = balance;
+          balance = roundingPolicy.currency(balance - principalPayment);
+          cumulativeInterest = roundingPolicy.currency(cumulativeInterest + interest);
+          rows.push({
+            month,
+            segment: segmentIndex + 1,
+            annualRate: segment.annualRate,
+            payment: roundingPolicy.currency(principalPayment + interest),
+            principalPayment: roundingPolicy.currency(principalPayment),
+            interestPayment: interest,
+            remainingBalance: balance,
+            cumulativeInterest
+          });
+        }
+        elapsedMonths += segment.months;
+      });
+
+      return {
+        totalPayment: rows.reduce((sum, row) => roundingPolicy.currency(sum + row.payment), 0),
+        totalPrincipal: roundingPolicy.currency(loan.principal),
+        totalInterest: cumulativeInterest,
+        endingBalance: balance,
+        rows
+      };
+    }
+
+    function calculateSnapshot(state) {
+      const existing = state.existingLoans.map((loan) => ({ loan, result: amortizeLoan(loan) }));
+      const refinance = amortizeLoan(state.refinanceLoan);
+      const existingTotalInterest = existing.reduce((sum, item) => roundingPolicy.currency(sum + item.result.totalInterest), 0);
+      const existingTotalPayment = existing.reduce((sum, item) => roundingPolicy.currency(sum + item.result.totalPayment), 0);
+      const refinanceCost = roundingPolicy.currency(state.refinanceCosts.totalCost);
+      const interestSavings = roundingPolicy.currency(existingTotalInterest - refinance.totalInterest);
+      const netSavings = roundingPolicy.currency(interestSavings - refinanceCost);
+      const breakEvenMonth = findBreakEvenMonth(existing, refinance, refinanceCost);
+
+      return {
+        existing,
+        refinance,
+        existingTotalInterest,
+        existingTotalPayment,
+        refinanceTotalInterest: refinance.totalInterest,
+        refinanceTotalPayment: refinance.totalPayment,
+        refinanceCost,
+        interestSavings,
+        netSavings,
+        breakEvenMonth
+      };
+    }
+
+    function findBreakEvenMonth(existing, refinance, refinanceCost) {
+      const maxRows = refinance.rows.length;
+      for (let index = 0; index < maxRows; index += 1) {
+        const existingInterest = existing.reduce((sum, item) => {
+          const row = item.result.rows[index];
+          return roundingPolicy.currency(sum + (row ? row.cumulativeInterest : item.result.totalInterest));
+        }, 0);
+        const refinanceInterest = refinance.rows[index] ? refinance.rows[index].cumulativeInterest : refinance.totalInterest;
+        const savings = roundingPolicy.currency(existingInterest - refinanceInterest);
+        if (savings >= refinanceCost) return index + 1;
+      }
+      return null;
+    }
+
+    function replaceState(nextState) {
+      appState = clone(nextState);
+      persistState();
+      render();
+    }
+
+    function setPath(path, value) {
+      const nextState = clone(appState);
+      const keys = path.split(".");
+      let cursor = nextState;
+      keys.slice(0, -1).forEach((key) => { cursor = cursor[key]; });
+      cursor[keys[keys.length - 1]] = value;
+      nextState.calculationResults = {};
+      replaceState(nextState);
+    }
+
+    function persistState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        existingLoans: appState.existingLoans,
+        refinanceLoan: appState.refinanceLoan,
+        refinanceCosts: appState.refinanceCosts,
+        uiState: appState.uiState
+      }));
+    }
+
+    function hydrateState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return;
+        const parsed = JSON.parse(stored);
+        appState = Object.assign(clone(defaultState), parsed, { calculationResults: {} });
+      } catch (error) {
+        localStorage.removeItem(STORAGE_KEY);
+        appState = clone(defaultState);
+      }
+    }
+
+    function formatCurrency(value) {
+      return roundingPolicy.currency(value).toLocaleString("zh-TW");
+    }
+
+    function render() {
+      renderLoans();
+      renderRefinanceSegments();
+      renderStatusAndResults();
+      bindInputs();
+    }
+
+    function renderLoans() {
+      document.getElementById("existingLoans").innerHTML = appState.existingLoans.map((loan, index) => `
+        <section class="loan">
+          <div class="loan-head">
+            <div class="loan-title">既有貸款 ${index + 1}</div>
+            <button class="danger" type="button" data-action="remove-loan" data-index="${index}">移除</button>
+          </div>
+          <div class="grid">
+            <label>名稱
+              <input data-path="existingLoans.${index}.name" type="text" value="${escapeHtml(loan.name || "")}">
+            </label>
+            <label>剩餘本金
+              <input data-path="existingLoans.${index}.principal" inputmode="decimal" type="number" min="0" step="1" value="${loan.principal}">
+            </label>
+            <label>剩餘期數（月）
+              <input data-path="existingLoans.${index}.months" inputmode="numeric" type="number" min="1" step="1" value="${loan.months}">
+            </label>
+          </div>
+          <h3>利率區段</h3>
+          <div>${renderSegmentInputs(`existingLoans.${index}.segments`, loan.segments)}</div>
+          <button type="button" data-action="add-segment" data-loan-index="${index}">新增利率區段</button>
+        </section>
+      `).join("");
+    }
+
+    function renderRefinanceSegments() {
+      const loan = appState.refinanceLoan;
+      document.querySelector('[data-path="refinanceLoan.principal"]').value = loan.principal;
+      document.querySelector('[data-path="refinanceLoan.months"]').value = loan.months;
+      document.querySelector('[data-path="refinanceLoan.note"]').value = loan.note || "";
+      document.querySelector('[data-path="refinanceCosts.totalCost"]').value = appState.refinanceCosts.totalCost;
+      document.getElementById("refinanceSegments").innerHTML = renderSegmentInputs("refinanceLoan.segments", loan.segments);
+    }
+
+    function renderSegmentInputs(path, segments) {
+      return segments.map((segment, index) => `
+        <div class="segment-row">
+          <label>期數（月）
+            <input data-path="${path}.${index}.months" inputmode="numeric" type="number" min="1" step="1" value="${segment.months}">
+          </label>
+          <label>年利率（%）
+            <input data-path="${path}.${index}.annualRate" inputmode="decimal" type="number" min="0" step="0.001" value="${segment.annualRate}">
+          </label>
+          <button class="danger" type="button" data-action="remove-segment" data-path="${path}" data-index="${index}">移除</button>
+        </div>
+      `).join("");
+    }
+
+    function renderStatusAndResults() {
+      const errors = validateState(appState);
+      if (errors.length > 0) {
+        document.getElementById("status").innerHTML = `<div class="message danger"><ul class="errors">${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join("")}</ul></div>`;
+        document.getElementById("summary").innerHTML = "";
+        document.getElementById("breakEven").innerHTML = "";
+        document.getElementById("details").innerHTML = "";
+        return;
+      }
+      const snapshot = appState.calculationResults.snapshot;
+      if (!snapshot) {
+        document.getElementById("status").innerHTML = `<div class="message">輸入有效，按下計算後產生 deterministic snapshot。</div>`;
+        document.getElementById("summary").innerHTML = "";
+        document.getElementById("breakEven").innerHTML = "";
+        document.getElementById("details").innerHTML = "";
+        return;
+      }
+      document.getElementById("status").innerHTML = `<div class="message">已產生 deterministic calculation snapshot。</div>`;
+      document.getElementById("summary").innerHTML = `
+        <div class="metric"><span>既有總利息</span><strong>${formatCurrency(snapshot.existingTotalInterest)}</strong></div>
+        <div class="metric"><span>轉貸總利息</span><strong>${formatCurrency(snapshot.refinanceTotalInterest)}</strong></div>
+        <div class="metric"><span>利息節省</span><strong>${formatCurrency(snapshot.interestSavings)}</strong></div>
+        <div class="metric"><span>扣除成本後</span><strong>${formatCurrency(snapshot.netSavings)}</strong></div>
+      `;
+      document.getElementById("breakEven").innerHTML = renderBreakEven(snapshot);
+      document.getElementById("details").innerHTML = renderDetails(snapshot);
+    }
+
+    function renderBreakEven(snapshot) {
+      const className = snapshot.netSavings >= 0 ? "message" : "message warn";
+      const monthText = snapshot.breakEvenMonth ? `第 ${snapshot.breakEvenMonth} 個月達成損益兩平` : "未在期內達成損益兩平";
+      return `<div class="${className}">${monthText}；轉貸成本 ${formatCurrency(snapshot.refinanceCost)}。</div>`;
+    }
+
+    function renderDetails(snapshot) {
+      const existingTables = snapshot.existing.map((item, index) => renderTable(`既有貸款 ${index + 1} 攤還表`, item.result.rows)).join("");
+      return `${existingTables}${renderTable("轉貸方案攤還表", snapshot.refinance.rows)}`;
+    }
+
+    function renderTable(title, rows) {
+      return `
+        <details>
+          <summary>${escapeHtml(title)}</summary>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>月份</th><th>區段</th><th>年利率</th><th>月付金</th><th>本金</th><th>利息</th><th>剩餘本金</th><th>累計利息</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map((row) => `
+                  <tr>
+                    <td>${row.month}</td>
+                    <td>${row.segment}</td>
+                    <td>${row.annualRate}%</td>
+                    <td>${formatCurrency(row.payment)}</td>
+                    <td>${formatCurrency(row.principalPayment)}</td>
+                    <td>${formatCurrency(row.interestPayment)}</td>
+                    <td>${formatCurrency(row.remainingBalance)}</td>
+                    <td>${formatCurrency(row.cumulativeInterest)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      `;
+    }
+
+    function bindInputs() {
+      document.querySelectorAll("[data-path]").forEach((element) => {
+        element.onchange = () => {
+          const value = element.type === "number" ? Number(element.value) : element.value;
+          setPath(element.dataset.path, value);
+        };
+      });
+      document.querySelectorAll("[data-action]").forEach((element) => {
+        element.onclick = () => handleAction(element.dataset);
+      });
+    }
+
+    function handleAction(dataset) {
+      const nextState = clone(appState);
+      if (dataset.action === "remove-loan") {
+        nextState.existingLoans.splice(Number(dataset.index), 1);
+      }
+      if (dataset.action === "add-segment") {
+        nextState.existingLoans[Number(dataset.loanIndex)].segments.push({ months: 12, annualRate: 2 });
+      }
+      if (dataset.action === "remove-segment") {
+        const segments = getPath(nextState, dataset.path);
+        if (segments.length > 1) segments.splice(Number(dataset.index), 1);
+      }
+      nextState.calculationResults = {};
+      replaceState(nextState);
+    }
+
+    function getPath(target, path) {
+      return path.split(".").reduce((cursor, key) => cursor[key], target);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    document.getElementById("addLoanButton").onclick = () => {
+      const nextState = clone(appState);
+      const index = nextState.existingLoans.length + 1;
+      nextState.existingLoans.push({
+        id: `loan-${Date.now()}`,
+        name: `既有貸款 ${index}`,
+        principal: 1000000,
+        months: 120,
+        segments: [{ months: 120, annualRate: 2 }]
+      });
+      nextState.calculationResults = {};
+      replaceState(nextState);
+    };
+
+    document.getElementById("addRefinanceSegmentButton").onclick = () => {
+      const nextState = clone(appState);
+      nextState.refinanceLoan.segments.push({ months: 12, annualRate: 2 });
+      nextState.calculationResults = {};
+      replaceState(nextState);
+    };
+
+    document.getElementById("calculateButton").onclick = () => {
+      const errors = validateState(appState);
+      if (errors.length > 0) {
+        render();
+        return;
+      }
+      const nextState = clone(appState);
+      nextState.calculationResults = { snapshot: calculateSnapshot(nextState) };
+      replaceState(nextState);
+    };
+
+    hydrateState();
+    render();
+  </script>
+</body>
+</html>

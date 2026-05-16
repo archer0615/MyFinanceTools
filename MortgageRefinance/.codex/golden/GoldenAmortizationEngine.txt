@@ -1,0 +1,14 @@
+export function calculateMonthlyPayment(principal, monthlyRate, months) {
+  if (monthlyRate === 0) {
+    return Math.round(principal / months);
+  }
+
+  const numerator = principal * monthlyRate;
+  const denominator = 1 - Math.pow(1 + monthlyRate, -months);
+
+  return Math.round(numerator / denominator);
+}
+
+export function roundCurrency(value) {
+  return Math.round(value);
+}

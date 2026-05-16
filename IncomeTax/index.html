@@ -19,8 +19,8 @@
     <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">深色主題</button>
   </header>
 
-  <main>
-    <section class="panel year-panel" aria-labelledby="yearSelectionTitle">
+  <main class="workspace-shell">
+    <aside class="panel year-panel tax-knowledge-panel" aria-labelledby="yearSelectionTitle">
       <div class="year-panel-header">
         <label>
           <span id="yearSelectionTitle">試算年度</span>
@@ -30,8 +30,25 @@
           <h2>年度固定資料</h2>
           <p class="muted">依選擇年度顯示扣除額與級距數據</p>
         </div>
+        <button id="yearDataToggle" class="year-data-toggle" type="button" aria-expanded="false" aria-controls="yearDataContent"
+onclick="
+const c=document.getElementById('yearDataContent');
+const open=this.getAttribute('aria-expanded') === 'true';
+
+if(open){
+  c.style.display='none';
+  this.setAttribute('aria-expanded','false');
+  this.textContent='展開';
+}else{
+  c.style.display='grid';
+  this.setAttribute('aria-expanded','true');
+  this.textContent='收合';
+}
+">
+展開
+</button>
       </div>
-      <div class="year-data-grid">
+      <div id="yearDataContent" class="year-data-grid" style="display:none;">
         <section class="result-block">
           <h3>扣除額資料</h3>
           <div id="yearDeductionData" class="breakdown"></div>
@@ -41,54 +58,18 @@
           <div id="yearBracketData" class="breakdown"></div>
         </section>
       </div>
-    </section>
+    </aside>
 
-    <section class="panel result-panel" aria-labelledby="resultTitle">
-      <h2 id="resultTitle">試算結果</h2>
-      <dl class="results">
-        <div><dt>最佳申報方式</dt><dd id="bestStrategy">-</dd></div>
-        <div><dt>總所得</dt><dd id="grossIncome">-</dd></div>
-        <div><dt>總扣除額</dt><dd id="totalDeductions">-</dd></div>
-        <div><dt>綜合所得淨額</dt><dd id="taxableIncome">-</dd></div>
-        <div><dt>應納稅額</dt><dd id="taxAmount">-</dd></div>
-        <div><dt>有效稅率</dt><dd id="effectiveRate">-</dd></div>
-        <div><dt>邊際稅率</dt><dd id="marginalRate">-</dd></div>
-      </dl>
-      <div class="result-grid">
-        <section class="result-block">
-          <h3>扣除額明細</h3>
-          <div id="deductionBreakdown" class="breakdown"></div>
-        </section>
-        <section class="result-block">
-          <h3>扶養摘要</h3>
-          <div id="dependentSummary" class="breakdown"></div>
-        </section>
-        <section class="result-block">
-          <h3>扣除額提醒</h3>
-          <div id="validationMessages" class="breakdown"></div>
-        </section>
-        <section class="result-block analysis-block">
-          <h3>節稅分析</h3>
-          <div id="taxSavingAnalysis" class="analysis"></div>
-        </section>
+    <aside class="panel household-panel" aria-labelledby="householdPanelTitle">
+      <h2 id="householdPanelTitle">家庭資料工作區</h2>
+      <p class="muted">本人、配偶與扶養親屬</p>
+      <div class="workspace-note">
+        <strong>申報資料</strong>
+        <span>收入、扣除額、扶養</span>
       </div>
-      <div class="chart-grid">
-        <section class="result-block">
-          <h3>有效稅率圖</h3>
-          <canvas id="effectiveRateChart" width="320" height="160"></canvas>
-        </section>
-        <section class="result-block">
-          <h3>稅率級距圖</h3>
-          <canvas id="taxBracketChart" width="320" height="160"></canvas>
-        </section>
-        <section class="result-block">
-          <h3>年度比較圖</h3>
-          <canvas id="yearComparisonChart" width="320" height="160"></canvas>
-        </section>
-      </div>
-    </section>
+    </aside>
 
-    <section class="panel input-panel" aria-labelledby="calculatorTitle">
+    <section class="panel input-panel person-editor-panel" aria-labelledby="calculatorTitle">
       <h2 id="calculatorTitle">試算資料</h2>
       <form id="taxForm" class="tax-form">
         <label>
@@ -154,6 +135,52 @@
       </form>
       <p id="errorMessage" class="error" role="alert" hidden>無法載入稅率資料</p>
     </section>
+
+    <section class="panel result-panel scenario-analysis-panel" aria-labelledby="resultTitle">
+      <h2 id="resultTitle">試算結果</h2>
+      <dl class="results">
+        <div><dt>最佳申報方式</dt><dd id="bestStrategy">-</dd></div>
+        <div><dt>總所得</dt><dd id="grossIncome">-</dd></div>
+        <div><dt>總扣除額</dt><dd id="totalDeductions">-</dd></div>
+        <div><dt>綜合所得淨額</dt><dd id="taxableIncome">-</dd></div>
+        <div><dt>應納稅額</dt><dd id="taxAmount">-</dd></div>
+        <div><dt>有效稅率</dt><dd id="effectiveRate">-</dd></div>
+        <div><dt>邊際稅率</dt><dd id="marginalRate">-</dd></div>
+      </dl>
+      <div class="result-grid">
+        <section class="result-block">
+          <h3>扣除額明細</h3>
+          <div id="deductionBreakdown" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>扶養摘要</h3>
+          <div id="dependentSummary" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>扣除額提醒</h3>
+          <div id="validationMessages" class="breakdown"></div>
+        </section>
+        <section class="result-block analysis-block">
+          <h3>節稅分析</h3>
+          <div id="taxSavingAnalysis" class="analysis"></div>
+        </section>
+      </div>
+      <div class="chart-grid">
+        <section class="result-block">
+          <h3>有效稅率圖</h3>
+          <canvas id="effectiveRateChart" width="320" height="160"></canvas>
+        </section>
+        <section class="result-block">
+          <h3>稅率級距圖</h3>
+          <canvas id="taxBracketChart" width="320" height="160"></canvas>
+        </section>
+        <section class="result-block">
+          <h3>年度比較圖</h3>
+          <canvas id="yearComparisonChart" width="320" height="160"></canvas>
+        </section>
+      </div>
+    </section>
+
   </main>
 
   <footer>
@@ -166,7 +193,9 @@
   <script src="js/dependent-engine.js"></script>
   <script src="js/deduction-engine.js"></script>
   <script src="js/tax-engine.js"></script>
+  <script src="js/household-model.js"></script>
   <script src="js/validation-engine.js"></script>
+  <script src="js/orchestration.js"></script>
   <script src="js/filing-strategy.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/charts.js"></script>

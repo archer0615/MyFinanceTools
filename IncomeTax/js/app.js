@@ -64,6 +64,16 @@
     calculateAndRender();
   }
 
+  function bindYearDataToggle() {
+    const button = document.getElementById("yearDataToggle");
+    if (!button) {
+      return;
+    }
+    button.addEventListener("click", function () {
+      window.IncomeTaxApp.ui.toggleYearData();
+    });
+  }
+
   function bindDependents(form) {
     document.getElementById("addDependent").addEventListener("click", function () {
       window.IncomeTaxApp.state.dependents.push({
@@ -120,6 +130,7 @@
     }
 
     bindDependents(form);
+    bindYearDataToggle();
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       calculateAndRender();

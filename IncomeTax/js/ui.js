@@ -32,12 +32,33 @@
     document.getElementById("yearDeductionData").innerHTML = deductionRows.map(function (row) {
       return escapeHtml(row[0]) + "：" + window.IncomeTaxApp.utils.formatCurrency(row[1] || 0);
     }).join("<br>");
-    document.getElementById("yearBracketData").innerHTML = data.taxBrackets.map(function (bracket) {
-      const max = bracket.max === null ? "以上" : window.IncomeTaxApp.utils.formatCurrency(bracket.max);
-      return window.IncomeTaxApp.utils.formatCurrency(bracket.min) + " - " + max
-        + "：" + window.IncomeTaxApp.utils.formatPercent(bracket.rate)
-        + "，累進差額 " + window.IncomeTaxApp.utils.formatCurrency(bracket.quickDeduction);
-    }).join("<br>");
+    document.getElementById("yearBracketData").innerHTML = [
+      "<div class=\"table-scroll\"><table class=\"tax-bracket-table\">",
+      "<thead><tr><th>級距</th><th>所得淨額範圍</th><th>稅率</th><th>累進差額</th></tr></thead>",
+      "<tbody>",
+      data.taxBrackets.map(function (bracket, index) {
+        const max = bracket.max === null ? "以上" : window.IncomeTaxApp.utils.formatCurrency(bracket.max);
+        return "<tr>"
+          + "<td>" + (index + 1) + "</td>"
+          + "<td>" + window.IncomeTaxApp.utils.formatCurrency(bracket.min) + " - " + max + "</td>"
+          + "<td>" + window.IncomeTaxApp.utils.formatPercent(bracket.rate) + "</td>"
+          + "<td>" + window.IncomeTaxApp.utils.formatCurrency(bracket.quickDeduction) + "</td>"
+          + "</tr>";
+      }).join(""),
+      "</tbody></table></div>"
+    ].join("");
+  }
+
+  function toggleYearData() {
+    const button = document.getElementById("yearDataToggle");
+    const content = document.getElementById("yearDataContent");
+    if (!button || !content) {
+      return;
+    }
+    const isOpen = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", String(!isOpen));
+    button.textContent = isOpen ? "展開" : "收合";
+    content.hidden = isOpen;
   }
 
   function numberFromForm(formData, name) {
@@ -186,6 +207,7 @@
     renderDependents: renderDependents,
     renderVersion: renderVersion,
     renderYearData: renderYearData,
+    toggleYearData: toggleYearData,
     renderResult: renderResult,
     setError: setError
   };

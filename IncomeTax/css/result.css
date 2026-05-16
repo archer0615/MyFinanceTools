@@ -9,6 +9,20 @@
   align-items: end;
 }
 
+.tax-knowledge-panel .year-panel-header {
+  grid-template-columns: minmax(160px, 220px) 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.year-data-toggle {
+  grid-column: auto;
+  width: auto;
+  min-width: 76px;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
 .year-panel-header h2 {
   margin-bottom: 6px;
 }
@@ -24,8 +38,63 @@
   margin-top: 18px;
 }
 
+.tax-knowledge-panel .year-data-grid {
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.tax-knowledge-panel .result-block {
+  padding: 10px 12px;
+}
+
+.tax-knowledge-panel .breakdown {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.tax-bracket-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.tax-bracket-table th,
+.tax-bracket-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tax-bracket-table th:first-child,
+.tax-bracket-table td:first-child,
+.tax-bracket-table th:nth-child(2),
+.tax-bracket-table td:nth-child(2) {
+  text-align: left;
+}
+
+.tax-bracket-table thead th {
+  background: var(--soft);
+  color: var(--label);
+  font-weight: 800;
+}
+
+.tax-bracket-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .results {
   grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.scenario-analysis-panel .results {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .results div {
@@ -57,6 +126,11 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-top: 18px;
+}
+
+.scenario-analysis-panel .result-grid,
+.scenario-analysis-panel .chart-grid {
+  grid-template-columns: 1fr;
 }
 
 canvas {
@@ -103,6 +177,10 @@ canvas {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .scenario-analysis-panel .results {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .result-grid,
   .chart-grid,
   .year-data-grid {
@@ -116,6 +194,7 @@ canvas {
 
 @media (max-width: 640px) {
   .results,
+  .scenario-analysis-panel .results,
   .result-grid,
   .chart-grid,
   .year-data-grid,

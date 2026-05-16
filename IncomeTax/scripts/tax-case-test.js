@@ -22,6 +22,9 @@ const context = {
   "js/dependent-engine.js",
   "js/deduction-engine.js",
   "js/tax-engine.js",
+  "js/household-model.js",
+  "js/validation-engine.js",
+  "js/orchestration.js",
   "js/filing-strategy.js"
 ].forEach((file) => {
   vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), context, { filename: file });
@@ -129,6 +132,68 @@ assertEqual(mortgage.grossIncome, 950000, "利息所得併入總所得");
 assertEqual(mortgage.deductions.savings, 150000, "儲蓄投資特別扣除額");
 assertEqual(mortgage.deductions.mortgageInterest, 130000, "房貸利息扣除額需扣除儲蓄扣除額");
 
+[
+  [0, 0],
+  [100000, 100000],
+  [270000, 270000],
+  [500000, 270000]
+].forEach(([interestIncome, expected]) => {
+  assertEqual(
+    context.window.IncomeTaxApp.deductions.calculateSavingsDeduction(data, interestIncome),
+    expected,
+    `儲蓄扣除額上限 ${interestIncome}`
+  );
+});
+
+const mortgageBlockedBySavings = context.window.IncomeTaxApp.deductions.calculateMortgageDeduction(data, {
+  isSelfUseResidence: true,
+  hasHouseholdRegistration: true,
+  isRented: false,
+  mortgageInterest: 200000
+}, 270000);
+assertEqual(mortgageBlockedBySavings, 0, "房貸利息低於儲蓄扣除額時不可為負數");
+
+const mortgageBlockedByRental = context.window.IncomeTaxApp.deductions.calculateMortgageDeduction(data, {
+  isSelfUseResidence: true,
+  hasHouseholdRegistration: true,
+  isRented: true,
+  mortgageInterest: 500000
+}, 0);
+assertEqual(mortgageBlockedByRental, 0, "出租住宅不可扣除購屋借款利息");
+
+const validation = context.window.IncomeTaxApp.validation.validateTaxInputs(baseInput({
+  taxpayer: {
+    salaryIncome: 800000,
+    professionalIncome: 0,
+    dividendIncome: 0,
+    interestIncome: 300000,
+    otherIncome: 0
+  },
+  deductions: {
+    insuranceSelf: 0,
+    insuranceSpouse: 0,
+    insuranceDependents: 0,
+    nationalHealthInsurance: 0,
+    medical: 0,
+    childbirth: 0,
+    donationGeneral: 0,
+    donationPolitical: 0,
+    donationPublic: 0,
+    disasterLoss: 0,
+    isSelfUseResidence: false,
+    hasHouseholdRegistration: false,
+    isRented: false,
+    mortgageInterest: 200000,
+    rent: 120000,
+    longTermCareCount: 0,
+    preschoolChildren: 0,
+    educationCount: 0
+  }
+}));
+assertEqual(validation.errors.length, 0, "validation 不阻止計算");
+assertEqual(validation.warnings.includes("可能不可同時適用"), true, "房租房貸互斥提醒");
+assertEqual(validation.warnings.includes("超過儲蓄投資特別扣除額上限"), true, "儲蓄扣除額上限提醒");
+
 const basicLiving = context.window.IncomeTaxApp.engine.calculateTax(data, baseInput({
   taxpayer: {
     salaryIncome: 0,
@@ -157,5 +222,19 @@ const basicLiving = context.window.IncomeTaxApp.engine.calculateTax(data, baseIn
 assertEqual(basicLiving.deductions.basicLiving.perPerson, 213000, "每人基本生活所需費用");
 assertEqual(basicLiving.deductions.basicLiving.total, 639000, "基本生活費總額");
 assertEqual(basicLiving.deductions.basicLivingDifference, 200000, "基本生活費差額");
+
+const strategy = context.window.IncomeTaxApp.strategy.compareFilingStrategies(data, baseInput({
+  taxpayer: {
+    salaryIncome: 800000,
+    professionalIncome: 0,
+    dividendIncome: 100000,
+    interestIncome: 0,
+    otherIncome: 0
+  }
+}));
+assertEqual(strategy.household.persons.length, 2, "Household canonical persons");
+assertEqual(strategy.strategyComparison.scenarios.length, 4, "情境列舉數");
+assertEqual(strategy.strategyComparison.bestStrategy, "joint-merged", "情境排序需穩定");
+assertEqual(strategy.diagnostics.length, 0, "診斷層輸出");
 
 console.log("稅務案例測試通過");

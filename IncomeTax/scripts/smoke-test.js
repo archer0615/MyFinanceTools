@@ -22,6 +22,9 @@ const context = {
   "js/dependent-engine.js",
   "js/deduction-engine.js",
   "js/tax-engine.js",
+  "js/household-model.js",
+  "js/validation-engine.js",
+  "js/orchestration.js",
   "js/filing-strategy.js"
 ].forEach((file) => {
   vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), context, { filename: file });

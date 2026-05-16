@@ -11,7 +11,13 @@ function assert(condition, message) {
   }
 }
 
-assert(html.indexOf('<section class="panel result-panel"') < html.indexOf('<section class="panel input-panel"'), "結果頁面必須在試算資料上方");
+assert(html.includes('<main class="workspace-shell">'), "缺少 workspace shell");
+assert(html.includes('class="panel household-panel"'), "缺少 household panel");
+assert(html.includes('class="panel input-panel person-editor-panel"'), "缺少 person editor panel");
+assert(html.includes('class="panel result-panel scenario-analysis-panel"'), "缺少 scenario analysis panel");
+assert(html.includes('class="panel year-panel tax-knowledge-panel"'), "缺少 tax knowledge panel");
+assert(html.indexOf('tax-knowledge-panel') < html.indexOf('household-panel'), "年度固定資料必須在 workspace 最上方");
+assert(html.indexOf('person-editor-panel') < html.indexOf('scenario-analysis-panel'), "legacy form 必須保留在情境分析前");
 assert(html.includes('id="themeToggle"'), "缺少深色主題切換按鈕");
 assert(html.includes("深色主題"), "缺少深色主題文字");
 assert(!html.includes('id="shareButton"'), "不應顯示分享連結按鈕");

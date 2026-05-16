@@ -11,7 +11,7 @@ class ChartRenderer {
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, rect.width, rect.height);
       this.renderAxes(context, rect.width, rect.height);
-      this.renderDatasets(context, datasets, rect.width, rect.height, viewport);
+      this.renderPrimarySeries(context, this.resolvePrimarySeries(datasets), rect.width, rect.height, viewport);
     });
   }
 
@@ -27,10 +27,15 @@ class ChartRenderer {
     }
   }
 
-  renderDatasets(context, datasets, width, height, viewport) {
-    const points = datasets.points || [];
+  resolvePrimarySeries(datasets) {
+    if (datasets.primarySeries) return datasets.primarySeries;
+    return { points: datasets.points || [], color: "#2563eb" };
+  }
+
+  renderPrimarySeries(context, series, width, height, viewport) {
+    const points = series.points || [];
     const maxValue = Math.max(...points.map((point) => point.value), 1);
-    context.strokeStyle = "#2563eb";
+    context.strokeStyle = series.color || "#2563eb";
     context.lineWidth = 2;
     context.beginPath();
     points.forEach((point, index) => {

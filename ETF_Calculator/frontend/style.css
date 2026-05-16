@@ -94,6 +94,12 @@ button {
   gap: 16px;
 }
 
+.workspace-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -140,7 +146,7 @@ canvas {
   max-width: 220px;
 }
 
-.analysis-grid {
+.workspace-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
@@ -173,9 +179,57 @@ progress {
   font-weight: 700;
 }
 
+.plain-list,
+.scenario-list,
+.matrix-grid {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plain-list li,
+.scenario-list li,
+.matrix-grid div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.plain-list li[data-severity="error"] {
+  border-color: #dc2626;
+  color: #991b1b;
+}
+
+.plain-list li[data-severity="warning"] {
+  border-color: #d97706;
+  color: #92400e;
+}
+
+.scenario-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.scenario-list span,
+.scenario-list strong,
+.scenario-list small {
+  min-width: 0;
+}
+
+.matrix-grid div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
 @media (max-width: 900px) {
   .app-shell,
-  .analysis-grid {
+  .workspace-grid {
     grid-template-columns: 1fr;
   }
 

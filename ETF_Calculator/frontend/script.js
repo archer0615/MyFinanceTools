@@ -29,7 +29,7 @@ function applyUrlState() {
 
 function runMonteCarloSimulation() {
   const state = stateManager.getState();
-  const config = getSimulationInput(state);
+  const config = buildSimulationInput(state);
   setText("workerStatus", i18n.loadingSimulation);
   setProgress(15);
 
@@ -69,26 +69,38 @@ function runMonteCarloSimulation() {
 
 function updateDerivedDataset() {
   const state = stateManager.getState();
-  const points = calculateCompoundGrowth(state.investment);
-  const metrics = calculateRiskMetrics(points);
-  services.setDerivedDataset(points, metrics);
-  updateHistoricalReplay(state.investment);
-}
-
-function getSimulationInput(state) {
-  return {
-    ...state.investment,
-    simulations: state.simulations.iterations
-  };
+  const derived = deriveInvestmentState(state.investment, getHistoricalReturns());
+  services.setDerivedDataset(
+    derived.dataset,
+    derived.result,
+    derived.portfolio,
+    derived.historicalReplay,
+    derived.scenarios,
+    derived.ranking,
+    derived.explanation,
+    derived.diagnostics,
+    derived.attribution,
+    derived.comparison
+  );
 }
 
 function updateInvestment(partialInvestment) {
   const state = stateManager.getState();
   const investment = { ...state.investment, ...partialInvestment };
-  const points = calculateCompoundGrowth(investment);
-  const metrics = calculateRiskMetrics(points);
-  services.setInvestmentAndDerived(investment, points, metrics);
-  updateHistoricalReplay(investment);
+  const derived = deriveInvestmentState(investment, getHistoricalReturns());
+  services.setInvestmentAndDerived(
+    derived.investment,
+    derived.dataset,
+    derived.result,
+    derived.portfolio,
+    derived.historicalReplay,
+    derived.scenarios,
+    derived.ranking,
+    derived.explanation,
+    derived.diagnostics,
+    derived.attribution,
+    derived.comparison
+  );
   syncInputs(stateManager.getState());
 }
 
@@ -101,7 +113,7 @@ function exportPng() {
   exportChartPng(document.getElementById("chartCanvas"), "etf-chart.png");
 }
 
-function updateHistoricalReplay(investment) {
+function getHistoricalReturns() {
   if (typeof historicalData === "undefined" || !historicalData.SP500) return;
-  services.setHistoricalReplay(runHistoricalReplay(investment, historicalData.SP500));
+  return historicalData.SP500;
 }

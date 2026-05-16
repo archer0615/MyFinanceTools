@@ -1,13 +1,26 @@
-# TASK QUEUE
+# TASK_QUEUE
 
-- [x] Build centralized state
-- [x] Build recurring investment engine
-- [x] Build CAGR engine
-- [x] Build Monte Carlo batching
-- [x] Build drawdown simulation
-- [x] Build Canvas renderer
-- [x] Build tooltip overlay
-- [x] Build localStorage sync
-- [x] Build URL state sync
-- [x] Build PNG export
-- [x] Run ArchitectureReview
+Phase 1
+- household domain recovery
+- normalized state
+- aggregation selectors
+- compatibility adapter
+
+Phase 2
+- workspace shell
+- panel orchestration
+- giant form extraction
+
+Phase 3
+- deterministic scenario enumeration
+- legality validation
+- ranking orchestration
+
+Phase 4
+- explainability recovery
+- comparative reasoning
+- savings attribution
+
+Phase 5
+- visualization recovery
+- transparency diagnostics

@@ -50,22 +50,40 @@
         </form>
       </aside>
       <section class="workspace">
-        <section class="kpi-grid" aria-label="風險指標">
+        <section id="kpi-grid" class="kpi-grid" aria-label="風險指標">
           <article><span data-i18n="finalValue"></span><strong id="finalValue">NT$ 0</strong></article>
           <article><span data-i18n="cagr"></span><strong id="cagr">0.00%</strong></article>
           <article><span data-i18n="maxDrawdown"></span><strong id="maxDrawdown">0.00%</strong></article>
           <article><span data-i18n="sharpeRatio"></span><strong id="sharpeRatio">0.00</strong></article>
         </section>
-        <section class="chart-area" aria-label="資產走勢">
+        <section id="chart-area" class="workspace-panel chart-area" aria-label="資產走勢">
           <canvas id="chartCanvas"></canvas>
           <div id="tooltip" class="tooltip" hidden></div>
         </section>
-        <section class="analysis-grid">
-          <article>
+        <section class="workspace-grid">
+          <article id="analysis-panel">
             <h2 data-i18n="analysis"></h2>
             <p id="summary" data-i18n="emptyState"></p>
+            <dl id="explanationList" class="mc-grid"></dl>
+            <ul id="diagnosticsList" class="plain-list"></ul>
           </article>
-          <article>
+          <article id="scenario-panel">
+            <h2 data-i18n="scenarioComparison"></h2>
+            <ol id="scenarioList" class="scenario-list"></ol>
+          </article>
+          <article id="ranking-panel">
+            <h2 data-i18n="optimizationRanking"></h2>
+            <ol id="rankingList" class="scenario-list"></ol>
+          </article>
+          <article id="comparison-matrix-panel">
+            <h2 data-i18n="comparisonMatrix"></h2>
+            <div id="comparisonMatrix" class="matrix-grid"></div>
+          </article>
+          <article id="transparency-panel">
+            <h2 data-i18n="transparencyDiagnostics"></h2>
+            <dl id="transparencyList" class="mc-grid"></dl>
+          </article>
+          <article id="historical-panel">
             <h2 data-i18n="historicalReplay"></h2>
             <dl class="mc-grid" aria-label="歷史回測結果">
               <div><dt data-i18n="yearRange"></dt><dd id="historicalYears">-</dd></div>
@@ -74,7 +92,7 @@
               <div><dt data-i18n="maxDrawdown"></dt><dd id="historicalDrawdown">-</dd></div>
             </dl>
           </article>
-          <article>
+          <article id="monte-carlo-panel">
             <h2 data-i18n="monteCarlo"></h2>
             <progress id="progress" max="100" value="0"></progress>
             <p id="workerStatus">待執行</p>
@@ -103,11 +121,14 @@
     <script src="core/compoundGrowth.js"></script>
     <script src="core/monteCarlo.js"></script>
     <script src="core/historicalReplay.js"></script>
+    <script src="domain/portfolioOrchestration.js"></script>
+    <script src="charts/VisualizationModel.js"></script>
     <script src="charts/ChartRenderer.js"></script>
     <script src="export/pngExport.js"></script>
     <script src="ui/formatters.js"></script>
     <script src="ui/inputs.js"></script>
     <script src="ui/presets.js"></script>
+    <script src="ui/workspaceShell.js"></script>
     <script src="ui/dashboardView.js"></script>
     <script src="ui/chartInteractions.js"></script>
     <script src="ui/monteCarloPanel.js"></script>

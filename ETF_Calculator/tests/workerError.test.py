@@ -19,6 +19,7 @@ test("worker error handler stores error and resets progress", () => {
     createRepository: () => ({}),
     createStateManager: () => ({ getState: () => ({ investment: {}, simulations: { iterations: 1 } }) }),
     createServiceLayer: () => services,
+    buildSimulationInput: (state) => ({ ...state.investment, simulations: state.simulations.iterations }),
     ChartRenderer: function ChartRenderer() {},
     setText: (id, value) => calls.push(["text", id, value]),
     setProgress: (value) => calls.push(["progress", value]),

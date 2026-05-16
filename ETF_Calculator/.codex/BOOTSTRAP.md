@@ -1,14 +1,15 @@
 # BOOTSTRAP
 
-Read order:
-1. architecture/ArchitectureLaws.md
-2. architecture/CanonicalArchitecture.md
-3. architecture/PriorityOrder.md
-4. contracts/SimulationContract.md
-5. patterns/SimulationBatchPattern.md
-6. golden/GoldenChartRenderer.js
+Read RECOVERY_BOOTSTRAP.md first.
 
-Execution:
-- Follow MASTER_PLAN.md
-- Use TASK_QUEUE.md
-- Review after every phase
+System mode:
+- deterministic
+- rollback-safe
+- compatibility-preserving
+- phased recovery
+
+Protected stable core:
+- tax calculation engine
+- dependency eligibility engine
+- yearly tax rule datasets
+- centralized deterministic state

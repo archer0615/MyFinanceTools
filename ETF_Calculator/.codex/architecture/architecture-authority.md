@@ -1,12 +1,6 @@
-# MASTER_PLAN
+# ARCHITECTURE AUTHORITY
 
-Target transformation:
-
-Tax Form Calculator
-→
-Household Tax Optimization Workspace
-
-Target architecture:
+Canonical architecture:
 
 Household Workspace UI
 ↓

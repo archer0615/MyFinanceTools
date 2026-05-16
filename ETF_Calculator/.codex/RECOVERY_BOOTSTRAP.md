@@ -1,8 +1,14 @@
-# RECOVERY BOOTSTRAP
+# RECOVERY_BOOTSTRAP
 
-1. Analyze architecture drift
-2. Generate phased recovery plan
-3. Execute recovery plan phase-by-phase
-4. Run ArchitectureReview after each phase
-5. Refactor violations immediately
-6. Continue until canonical architecture restored
+Recovery execution order:
+
+1. stabilization
+2. compatibility preservation
+3. orchestration recovery
+4. deterministic migration
+5. legacy phase-out
+
+Execution mode:
+- Strangler-Fig Incremental Recovery
+- phase-aware migration
+- rollback-safe execution

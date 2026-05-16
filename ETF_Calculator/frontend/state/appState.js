@@ -10,12 +10,21 @@ const DEFAULT_STATE = {
     volatility: 0.16,
     dividendYield: 0.02
   },
+  portfolio: {
+    investorId: "primary"
+  },
   simulations: {
     iterations: 1000,
     monteCarlo: null,
     historicalReplay: null,
+    scenarios: [],
+    ranking: [],
     result: null
   },
+  explanation: null,
+  attribution: [],
+  comparison: null,
+  diagnostics: [],
   charts: {
     viewport: {
       zoom: 1,
@@ -91,12 +100,21 @@ function migrateState(storedState) {
       volatility: legacyConfig.volatility,
       dividendYield: legacyConfig.dividendYield
     },
+    portfolio: {
+      investorId: "primary"
+    },
     simulations: {
       iterations: legacyConfig.simulations,
       monteCarlo: storedState.monteCarlo || null,
       historicalReplay: storedState.historicalReplay || null,
+      scenarios: [],
+      ranking: [],
       result: storedState.result || null
     },
+    explanation: null,
+    attribution: [],
+    comparison: null,
+    diagnostics: [],
     charts: {
       viewport: legacyUi.viewport
     },
@@ -118,7 +136,10 @@ function mergeState(base, patch) {
     ...base,
     ...patch,
     investment: { ...base.investment, ...(patch.investment || {}) },
+    portfolio: { ...base.portfolio, ...(patch.portfolio || {}) },
     simulations: { ...base.simulations, ...(patch.simulations || {}) },
+    explanation: patch.explanation || base.explanation,
+    diagnostics: patch.diagnostics || base.diagnostics,
     charts: {
       ...base.charts,
       ...(patch.charts || {}),
@@ -129,6 +150,8 @@ function mergeState(base, patch) {
     },
     presets: { ...base.presets, ...(patch.presets || {}) },
     ui: { ...base.ui, ...(patch.ui || {}) },
+    attribution: patch.attribution || base.attribution,
+    comparison: patch.comparison || base.comparison,
     export: { ...base.export, ...(patch.export || {}) }
   };
 }
@@ -150,16 +173,38 @@ function createServiceLayer(stateManager) {
         simulations: { ...state.simulations, result }
       }));
     },
-    setDerivedDataset(dataset, result) {
+    setDerivedDataset(dataset, result, portfolio, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison) {
       stateManager.setState((state) => ({
-        simulations: { ...state.simulations, result },
+        portfolio: portfolio || state.portfolio,
+        simulations: {
+          ...state.simulations,
+          result,
+          ...(historicalReplay ? { historicalReplay } : {}),
+          ...(scenarios ? { scenarios } : {}),
+          ...(ranking ? { ranking } : {})
+        },
+        explanation: explanation || state.explanation,
+        attribution: attribution || state.attribution,
+        comparison: comparison || state.comparison,
+        diagnostics: diagnostics || state.diagnostics,
         charts: { ...state.charts, dataset }
       }));
     },
-    setInvestmentAndDerived(investment, dataset, result) {
+    setInvestmentAndDerived(investment, dataset, result, portfolio, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison) {
       stateManager.setState((state) => ({
+        portfolio: portfolio || state.portfolio,
         investment,
-        simulations: { ...state.simulations, result },
+        simulations: {
+          ...state.simulations,
+          result,
+          ...(historicalReplay ? { historicalReplay } : {}),
+          ...(scenarios ? { scenarios } : {}),
+          ...(ranking ? { ranking } : {})
+        },
+        explanation: explanation || state.explanation,
+        attribution: attribution || state.attribution,
+        comparison: comparison || state.comparison,
+        diagnostics: diagnostics || state.diagnostics,
         charts: { ...state.charts, dataset }
       }));
     },

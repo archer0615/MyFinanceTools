@@ -1,15 +1,14 @@
 # COMMANDS
 
-New Project:
-Read .codex/BOOTSTRAP.md first.
-Then execute MASTER_PLAN.md.
+Recovery startup:
 
-Recovery Project:
-Read .codex/BOOTSTRAP.md first.
-Then execute RECOVERY_BOOTSTRAP.md.
+```bash
+cat .codex/BOOTSTRAP.md
+cat .codex/RECOVERY_BOOTSTRAP.md
+```
 
-Continue:
-Continue MASTER_PLAN.md from current phase.
+Validation:
 
-Review:
-Review implementation against ArchitectureReview.md.
+```bash
+cat .codex/execution/validation-checkpoints.md
+```

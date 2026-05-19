@@ -11,14 +11,66 @@ const DEFAULT_STATE = {
     dividendYield: 0.02
   },
   portfolio: {
-    investorId: "primary"
+    investorId: "primary",
+    baseCurrency: "TWD",
+    exchangeRates: {
+      USD_TWD: 32
+    },
+    holdings: [
+      {
+        ticker: "VOO",
+        displayName: "Vanguard S&P 500 ETF",
+        allocation: 0.5,
+        cagr: 0.103,
+        dividendYield: 0.014,
+        expenseRatio: 0.0003,
+        volatility: 0.155,
+        region: "US",
+        category: "Large Cap",
+        inceptionYear: 2010
+      },
+      {
+        ticker: "QQQ",
+        displayName: "Invesco QQQ Trust",
+        allocation: 0.3,
+        cagr: 0.145,
+        dividendYield: 0.006,
+        expenseRatio: 0.002,
+        volatility: 0.215,
+        region: "US",
+        category: "Technology",
+        inceptionYear: 1999
+      },
+      {
+        ticker: "SCHD",
+        displayName: "Schwab US Dividend Equity ETF",
+        allocation: 0.2,
+        cagr: 0.108,
+        dividendYield: 0.035,
+        expenseRatio: 0.0006,
+        volatility: 0.15,
+        region: "US",
+        category: "Dividend",
+        inceptionYear: 2011
+      }
+    ],
+    metrics: null
   },
   simulations: {
     iterations: 1000,
     monteCarlo: null,
     historicalReplay: null,
     scenarios: [],
+    economicScenarios: [],
     ranking: [],
+    rebalancing: [],
+    leverage: null,
+    crash: null,
+    fire: null,
+    tax: null,
+    optimization: null,
+    portfolioComparison: [],
+    liveQuotes: [],
     result: null
   },
   explanation: null,
@@ -30,7 +82,8 @@ const DEFAULT_STATE = {
       zoom: 1,
       panX: 0
     },
-    dataset: null
+    dataset: null,
+    activeView: "overview"
   },
   presets: {
     selected: "balanced"
@@ -163,6 +216,30 @@ function createServiceLayer(stateManager) {
         investment: { ...state.investment, ...partialInvestment }
       }));
     },
+    updatePortfolioSettings(partialPortfolio) {
+      stateManager.setState((state) => ({
+        portfolio: { ...state.portfolio, ...partialPortfolio }
+      }));
+    },
+    setPortfolioAndDerived(portfolio, investment, dataset, result, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison, economicScenarios) {
+      stateManager.setState((state) => ({
+        portfolio: portfolio || state.portfolio,
+        investment,
+        simulations: {
+          ...state.simulations,
+          result,
+          ...(historicalReplay ? { historicalReplay } : {}),
+          ...(scenarios ? { scenarios } : {}),
+          ...(economicScenarios ? { economicScenarios } : {}),
+          ...(ranking ? { ranking } : {})
+        },
+        explanation: explanation || state.explanation,
+        attribution: attribution || state.attribution,
+        comparison: comparison || state.comparison,
+        diagnostics: diagnostics || state.diagnostics,
+        charts: { ...state.charts, dataset }
+      }));
+    },
     updateSimulationConfig(partialSimulationConfig) {
       stateManager.setState((state) => ({
         simulations: { ...state.simulations, ...partialSimulationConfig }
@@ -173,7 +250,7 @@ function createServiceLayer(stateManager) {
         simulations: { ...state.simulations, result }
       }));
     },
-    setDerivedDataset(dataset, result, portfolio, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison) {
+    setDerivedDataset(dataset, result, portfolio, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison, economicScenarios) {
       stateManager.setState((state) => ({
         portfolio: portfolio || state.portfolio,
         simulations: {
@@ -181,6 +258,7 @@ function createServiceLayer(stateManager) {
           result,
           ...(historicalReplay ? { historicalReplay } : {}),
           ...(scenarios ? { scenarios } : {}),
+          ...(economicScenarios ? { economicScenarios } : {}),
           ...(ranking ? { ranking } : {})
         },
         explanation: explanation || state.explanation,
@@ -190,7 +268,7 @@ function createServiceLayer(stateManager) {
         charts: { ...state.charts, dataset }
       }));
     },
-    setInvestmentAndDerived(investment, dataset, result, portfolio, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison) {
+    setInvestmentAndDerived(investment, dataset, result, portfolio, historicalReplay, scenarios, ranking, explanation, diagnostics, attribution, comparison, economicScenarios) {
       stateManager.setState((state) => ({
         portfolio: portfolio || state.portfolio,
         investment,
@@ -199,6 +277,7 @@ function createServiceLayer(stateManager) {
           result,
           ...(historicalReplay ? { historicalReplay } : {}),
           ...(scenarios ? { scenarios } : {}),
+          ...(economicScenarios ? { economicScenarios } : {}),
           ...(ranking ? { ranking } : {})
         },
         explanation: explanation || state.explanation,
@@ -210,7 +289,48 @@ function createServiceLayer(stateManager) {
     },
     setMonteCarloResult(monteCarlo) {
       stateManager.setState((state) => ({
-        simulations: { ...state.simulations, monteCarlo }
+        simulations: { ...state.simulations, monteCarlo },
+        ui: { ...state.ui, isLoading: false }
+      }));
+    },
+    setRebalancingResult(rebalancing) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, rebalancing }
+      }));
+    },
+    setLeverageResult(leverage) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, leverage }
+      }));
+    },
+    setCrashResult(crash) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, crash }
+      }));
+    },
+    setFireResult(fire) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, fire }
+      }));
+    },
+    setTaxResult(tax) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, tax }
+      }));
+    },
+    setOptimizationResult(optimization) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, optimization }
+      }));
+    },
+    setPortfolioComparison(portfolioComparison) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, portfolioComparison }
+      }));
+    },
+    setLiveQuotes(liveQuotes) {
+      stateManager.setState((state) => ({
+        simulations: { ...state.simulations, liveQuotes }
       }));
     },
     setHistoricalReplay(historicalReplay) {
@@ -226,9 +346,19 @@ function createServiceLayer(stateManager) {
         }
       }));
     },
+    setChartView(activeView) {
+      stateManager.setState((state) => ({
+        charts: { ...state.charts, activeView }
+      }));
+    },
     setError(error) {
       stateManager.setState((state) => ({
-        ui: { ...state.ui, error }
+        ui: { ...state.ui, error, isLoading: false }
+      }));
+    },
+    setLoading(isLoading) {
+      stateManager.setState((state) => ({
+        ui: { ...state.ui, isLoading }
       }));
     }
   };

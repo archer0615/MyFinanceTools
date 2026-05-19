@@ -16,15 +16,24 @@ function calculateCompoundGrowth(config) {
   return points;
 }
 
-function calculateRiskMetrics(points) {
+function calculateRiskMetrics(points, options = {}) {
   const finalPoint = points.at(-1);
   const cagr = finalPoint ? Math.pow(finalPoint.value / finalPoint.contribution, 1 / finalPoint.year) - 1 : 0;
   const maxDrawdown = calculateMaxDrawdown(points.map((point) => point.value));
-  const volatility = standardDeviation(points.map((point) => point.returnRate));
+  const annualReturns = calculateAnnualReturns(points);
+  const volatility = standardDeviation(annualReturns.length ? annualReturns : points.map((point) => point.returnRate));
+  const downsideVolatility = calculateDownsideDeviation(annualReturns, 0.01);
+  const dividendCagr = calculateDividendCagr(points, Number(options.dividendYield) || 0);
+  const inflationRate = Number(options.inflationRate) || 0.02;
   return {
     cagr,
     maxDrawdown,
-    sharpeRatio: volatility > 0 ? (cagr - 0.01) / volatility : 0
+    volatility,
+    annualizedReturn: cagr,
+    realReturnAfterInflation: (1 + cagr) / (1 + inflationRate) - 1,
+    dividendCagr,
+    sharpeRatio: volatility > 0 ? (cagr - 0.01) / volatility : 0,
+    sortinoRatio: downsideVolatility > 0 ? (cagr - 0.01) / downsideVolatility : 0
   };
 }
 
@@ -43,4 +52,28 @@ function standardDeviation(values) {
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
   const variance = values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
   return Math.sqrt(variance);
+}
+
+function calculateAnnualReturns(points) {
+  return points.map((point, index) => {
+    const previousValue = index === 0 ? point.contribution : points[index - 1].value;
+    const previousContribution = index === 0 ? 0 : points[index - 1].contribution;
+    const newContribution = point.contribution - previousContribution;
+    return previousValue > 0 ? (point.value - newContribution) / previousValue - 1 : 0;
+  });
+}
+
+function calculateDownsideDeviation(returns, minimumAcceptableReturn) {
+  const downsideReturns = returns
+    .map((value) => Math.min(value - minimumAcceptableReturn, 0))
+    .filter((value) => value < 0);
+  return standardDeviation(downsideReturns);
+}
+
+function calculateDividendCagr(points, dividendYield) {
+  if (points.length < 2) return 0;
+  const firstDividend = points[0].value * dividendYield;
+  const lastDividend = points.at(-1).value * dividendYield;
+  if (firstDividend <= 0 || lastDividend <= 0) return 0;
+  return Math.pow(lastDividend / firstDividend, 1 / Math.max(points.at(-1).year - points[0].year, 1)) - 1;
 }

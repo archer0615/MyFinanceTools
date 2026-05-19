@@ -38,6 +38,19 @@ function bindChartInteractions(getState, updateViewport) {
     const tooltip = document.getElementById("tooltip");
     if (tooltip) tooltip.hidden = true;
   });
+
+  canvas.addEventListener("keydown", (event) => {
+    const keyActions = {
+      ArrowLeft: (viewport) => ({ ...viewport, panX: viewport.panX - 24 }),
+      ArrowRight: (viewport) => ({ ...viewport, panX: viewport.panX + 24 }),
+      "+": (viewport) => ({ ...viewport, zoom: Math.min(4, viewport.zoom + 0.1) }),
+      "-": (viewport) => ({ ...viewport, zoom: Math.max(1, viewport.zoom - 0.1) })
+    };
+    const action = keyActions[event.key];
+    if (!action) return;
+    event.preventDefault();
+    updateViewport(action);
+  });
 }
 
 function updateTooltip(event, points, viewport) {

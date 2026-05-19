@@ -1,6 +1,8 @@
 function createPortfolioAggregate(investment) {
   return {
     investorId: "primary",
+    holdings: [],
+    metrics: null,
     persons: [
       {
         id: "primary",
@@ -13,26 +15,40 @@ function createPortfolioAggregate(investment) {
 }
 
 function derivePortfolioState(portfolio, historicalReturns) {
-  const investment = { ...portfolio.investment };
+  const portfolioMetrics = calculatePortfolioMetrics(portfolio.holdings || []);
+  const investment = deriveInvestmentFromPortfolio(portfolio.investment, portfolio.holdings || []);
+  const enrichedPortfolio = {
+    ...portfolio,
+    holdings: portfolioMetrics.holdings,
+    metrics: portfolioMetrics,
+    investment: { ...investment }
+  };
   const dataset = calculateCompoundGrowth(investment);
-  const result = calculateRiskMetrics(dataset);
+  const result = calculateRiskMetrics(dataset, { dividendYield: investment.dividendYield });
   const historicalReplay = Array.isArray(historicalReturns)
     ? runHistoricalReplay(investment, historicalReturns)
     : null;
   const scenarios = enumeratePortfolioScenarios(investment);
+  const economicScenarios = typeof enumerateEconomicScenarios === "function"
+    ? enumerateEconomicScenarios(investment)
+    : [];
   const ranking = rankPortfolioScenarios(scenarios);
   const attribution = attributeScenarioSavings(scenarios);
   const comparison = compareRankedScenarios(ranking);
   const explanation = explainPortfolioResult({ investment, dataset, result, historicalReplay, ranking, attribution, comparison });
-  const diagnostics = validatePortfolioState({ investment, dataset, result, historicalReplay, scenarios });
+  const diagnostics = [
+    ...validatePortfolioAllocations(portfolio.holdings || []),
+    ...validatePortfolioState({ investment, dataset, result, historicalReplay, scenarios })
+  ];
 
   return {
-    portfolio,
+    portfolio: enrichedPortfolio,
     investment,
     dataset,
     result,
     historicalReplay,
     scenarios,
+    economicScenarios,
     ranking,
     attribution,
     comparison,
@@ -43,6 +59,14 @@ function derivePortfolioState(portfolio, historicalReturns) {
 
 function deriveInvestmentState(investment, historicalReturns) {
   return derivePortfolioState(createPortfolioAggregate(investment), historicalReturns);
+}
+
+function deriveHoldingsState(investment, holdings, historicalReturns) {
+  return derivePortfolioState({
+    investorId: "primary",
+    holdings,
+    investment: { ...investment }
+  }, historicalReturns);
 }
 
 function buildSimulationInput(state) {
@@ -74,7 +98,7 @@ function enumeratePortfolioScenarios(investment) {
 
 function createScenario(id, label, investment, sequence) {
   const dataset = calculateCompoundGrowth(investment);
-  const result = calculateRiskMetrics(dataset);
+  const result = calculateRiskMetrics(dataset, { dividendYield: investment.dividendYield });
   const finalPoint = dataset.at(-1) || { value: 0, contribution: 0 };
   const legality = validateScenarioLegality(investment);
 

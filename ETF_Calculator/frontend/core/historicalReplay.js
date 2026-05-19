@@ -21,7 +21,7 @@ function runHistoricalReplay(input, marketReturns) {
 
   return {
     points,
-    metrics: calculateRiskMetrics(points),
+    metrics: calculateRiskMetrics(points, { dividendYield: input.dividendYield }),
     sourceYears: years.map((item) => item.year)
   };
 }

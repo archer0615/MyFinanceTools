@@ -10,6 +10,7 @@
     <main class="app-shell">
       <aside class="control-panel" aria-label="投資參數">
         <h1 data-i18n="appTitle"></h1>
+        <button type="button" id="themeToggle" class="secondary-action" aria-pressed="false">深色模式</button>
         <form id="controls" class="form-grid">
           <label>
             <span data-i18n="initialAmount"></span>
@@ -39,25 +40,204 @@
             <span data-i18n="simulations"></span>
             <input id="simulations" type="number" min="100" max="5000" step="100" value="1000">
           </label>
+          <section class="portfolio-editor" aria-label="ETF 投資組合">
+            <h2>ETF 組合</h2>
+            <label>
+              <span>搜尋 ETF</span>
+              <input id="etfPresetSearch" type="search" placeholder="VOO / 高股息 / Taiwan">
+            </label>
+            <label>
+              <span>ETF 預設</span>
+              <select id="etfPresetSelect"></select>
+            </label>
+            <label>
+              <span>配置比例 %</span>
+              <input id="etfAllocation" type="number" min="0.1" max="100" step="0.1" value="20">
+            </label>
+            <label>
+              <span>基準幣別</span>
+              <select id="baseCurrency">
+                <option value="TWD">TWD</option>
+                <option value="USD">USD</option>
+              </select>
+            </label>
+            <label>
+              <span>USD/TWD 匯率</span>
+              <input id="usdTwdRate" type="number" min="1" max="100" step="0.01" value="32">
+            </label>
+            <div class="button-row" role="group" aria-label="ETF 組合操作">
+              <button type="button" id="addEtf">加入 / 更新</button>
+              <button type="button" id="rebalanceEtfs">自動平衡</button>
+            </div>
+            <button type="button" id="refreshLiveQuotes">更新 ETF 資料</button>
+            <label>
+              <span>資料來源</span>
+              <select id="etfProviderPreset">
+                <option value="custom">自訂 URL</option>
+                <option value="mock">Mock Provider</option>
+                <option value="twse">TWSE OpenAPI</option>
+              </select>
+            </label>
+            <label>
+              <span>ETF API URL</span>
+              <input id="etfProviderUrl" type="url" placeholder="https://example.com/quote">
+            </label>
+            <dl class="portfolio-metrics">
+              <div><dt>加權 CAGR</dt><dd id="portfolioCagr">0.00%</dd></div>
+              <div><dt>股息率</dt><dd id="portfolioDividend">0.00%</dd></div>
+              <div><dt>費用率</dt><dd id="portfolioExpense">0.00%</dd></div>
+              <div><dt>波動率</dt><dd id="portfolioVolatility">0.00%</dd></div>
+            </dl>
+            <dl id="currencyExposure" class="portfolio-metrics" aria-label="幣別配置"></dl>
+            <dl id="currencyExposureValue" class="portfolio-metrics" aria-label="幣別換算"></dl>
+            <ul id="portfolioHoldings" class="portfolio-holdings"></ul>
+            <textarea id="portfolioConfigText" rows="5" aria-label="投資組合 JSON 設定"></textarea>
+            <div class="button-row" role="group" aria-label="投資組合設定匯入匯出">
+              <button type="button" id="exportPortfolioConfig">匯出設定</button>
+              <button type="button" id="importPortfolioConfig">匯入設定</button>
+            </div>
+            <div class="button-row" role="group" aria-label="雲端同步設定">
+              <button type="button" id="exportCloudSnapshot">匯出同步</button>
+              <button type="button" id="importCloudSnapshot">匯入同步</button>
+            </div>
+            <label>
+              <span>儲存組合名稱</span>
+              <input id="savedPortfolioName" type="text" value="核心 ETF">
+            </label>
+            <div class="button-row" role="group" aria-label="儲存組合">
+              <button type="button" id="savePortfolioSnapshot">儲存組合</button>
+              <button type="button" id="runPortfolioComparison">比較組合</button>
+            </div>
+            <ol id="savedPortfolioList" class="scenario-list"></ol>
+          </section>
           <div class="button-row" role="group" aria-label="情境預設">
             <button type="button" data-preset="conservative" data-i18n="conservative"></button>
             <button type="button" data-preset="balanced" data-i18n="balanced"></button>
             <button type="button" data-preset="aggressive" data-i18n="aggressive"></button>
             <button type="button" data-preset="crisis" data-i18n="crisis"></button>
+            <button type="button" data-preset="bullMarket">多頭市場</button>
+            <button type="button" data-preset="bearMarket">熊市</button>
+            <button type="button" data-preset="highInflation">高通膨</button>
+            <button type="button" data-preset="stagflation">停滯性通膨</button>
           </div>
           <button type="button" id="runMonteCarlo" class="primary-action" data-i18n="runSimulation"></button>
-          <button type="button" id="exportPng" data-i18n="exportPng"></button>
+          <button type="button" id="runRebalancing">再平衡比較</button>
+          <section class="portfolio-editor" aria-label="槓桿與壓力測試">
+            <h2>槓桿 / 壓力</h2>
+            <label>
+              <span>信貸金額</span>
+              <input id="loanPrincipal" type="number" min="0" step="10000" value="500000">
+            </label>
+            <label>
+              <span>信貸利率 %</span>
+              <input id="loanRate" type="number" min="0" max="30" step="0.1" value="3">
+            </label>
+            <label>
+              <span>還款年限</span>
+              <input id="loanYears" type="number" min="1" max="30" step="1" value="7">
+            </label>
+            <button type="button" id="runLeverage">槓桿模擬</button>
+            <label>
+              <span>崩跌情境</span>
+              <select id="crashScenario">
+                <option value="2008">2008 金融海嘯</option>
+                <option value="covid">COVID 崩跌</option>
+                <option value="dotcom">網路泡沫</option>
+              </select>
+            </label>
+            <button type="button" id="runCrash">壓力測試</button>
+          </section>
+          <section class="portfolio-editor" aria-label="FIRE 模擬">
+            <h2>FIRE</h2>
+            <label>
+              <span>目前年齡</span>
+              <input id="currentAge" type="number" min="0" max="100" step="1" value="35">
+            </label>
+            <label>
+              <span>退休年齡</span>
+              <input id="retirementAge" type="number" min="0" max="100" step="1" value="50">
+            </label>
+            <label>
+              <span>月支出</span>
+              <input id="monthlyExpenses" type="number" min="0" step="1000" value="60000">
+            </label>
+            <label>
+              <span>每月被動收入目標</span>
+              <input id="monthlyPassiveIncomeGoal" type="number" min="0" step="1000" value="100000">
+            </label>
+            <label>
+              <span>安全提領率 %</span>
+              <input id="safeWithdrawalRate" type="number" min="0.1" max="20" step="0.1" value="4">
+            </label>
+            <label>
+              <span>通膨率 %</span>
+              <input id="inflationRate" type="number" min="0" max="20" step="0.1" value="2">
+            </label>
+            <button type="button" id="runFire">FIRE 模擬</button>
+          </section>
+          <section class="portfolio-editor" aria-label="稅務模擬">
+            <h2>稅務</h2>
+            <label>
+              <span>股息稅率 %</span>
+              <input id="dividendTaxRate" type="number" min="0" max="100" step="0.1" value="30">
+            </label>
+            <label>
+              <span>資本利得稅率 %</span>
+              <input id="capitalGainsTaxRate" type="number" min="0" max="100" step="0.1" value="0">
+            </label>
+            <label>
+              <span>遺產稅率 %</span>
+              <input id="estateTaxRate" type="number" min="0" max="100" step="0.1" value="0">
+            </label>
+            <label>
+              <span>遺產免稅額</span>
+              <input id="estateExemption" type="number" min="0" step="100000" value="0">
+            </label>
+            <button type="button" id="runTax">稅務模擬</button>
+          </section>
+          <section class="portfolio-editor" aria-label="投資組合最佳化">
+            <h2>最佳化</h2>
+            <label>
+              <span>單一 ETF 上限 %</span>
+              <input id="maxOptimizedAllocation" type="number" min="5" max="100" step="1" value="60">
+            </label>
+            <button type="button" id="runOptimization">最佳化配置</button>
+          </section>
+          <section class="portfolio-editor" aria-label="匯出報表">
+            <h2>匯出</h2>
+            <div class="button-row" role="group" aria-label="匯出格式">
+              <button type="button" id="exportPng" data-i18n="exportPng"></button>
+              <button type="button" id="exportJson">匯出 JSON</button>
+              <button type="button" id="exportCsv">匯出 CSV</button>
+            </div>
+          </section>
         </form>
       </aside>
       <section class="workspace">
+        <nav class="mobile-tabs" aria-label="手機工作區導覽">
+          <button type="button" data-mobile-tab="summary" aria-pressed="true">Summary</button>
+          <button type="button" data-mobile-tab="portfolio" aria-pressed="false">Portfolio</button>
+          <button type="button" data-mobile-tab="charts" aria-pressed="false">Charts</button>
+          <button type="button" data-mobile-tab="simulation" aria-pressed="false">Simulation</button>
+          <button type="button" data-mobile-tab="settings" aria-pressed="false">Settings</button>
+        </nav>
         <section id="kpi-grid" class="kpi-grid" aria-label="風險指標">
-          <article><span data-i18n="finalValue"></span><strong id="finalValue">NT$ 0</strong></article>
-          <article><span data-i18n="cagr"></span><strong id="cagr">0.00%</strong></article>
-          <article><span data-i18n="maxDrawdown"></span><strong id="maxDrawdown">0.00%</strong></article>
-          <article><span data-i18n="sharpeRatio"></span><strong id="sharpeRatio">0.00</strong></article>
+          <article data-kpi-tone="neutral"><span data-i18n="finalValue"></span><strong id="finalValue">NT$ 0</strong><small id="finalValueTrend">Base</small></article>
+          <article data-kpi-tone="neutral"><span data-i18n="cagr"></span><strong id="cagr">0.00%</strong><small id="cagrTrend">Base</small></article>
+          <article data-kpi-tone="neutral"><span data-i18n="maxDrawdown"></span><strong id="maxDrawdown">0.00%</strong><small id="drawdownTrend">Base</small></article>
+          <article data-kpi-tone="neutral"><span data-i18n="sharpeRatio"></span><strong id="sharpeRatio">0.00</strong><small id="sharpeTrend">Base</small></article>
+          <article data-kpi-tone="neutral"><span>Sortino</span><strong id="sortinoRatio">0.00</strong><small id="sortinoTrend">Base</small></article>
+          <article data-kpi-tone="neutral"><span>實質報酬</span><strong id="realReturn">0.00%</strong><small id="realReturnTrend">Base</small></article>
         </section>
         <section id="chart-area" class="workspace-panel chart-area" aria-label="資產走勢">
-          <canvas id="chartCanvas"></canvas>
+          <div class="chart-view-tabs" role="tablist" aria-label="圖表檢視">
+            <button type="button" data-chart-view="overview">總覽</button>
+            <button type="button" data-chart-view="rebalancing">再平衡</button>
+            <button type="button" data-chart-view="leverage">槓桿</button>
+            <button type="button" data-chart-view="crash">壓力</button>
+            <button type="button" data-chart-view="fire">FIRE</button>
+          </div>
+          <canvas id="chartCanvas" role="img" tabindex="0" aria-label="ETF 資產走勢圖，可用方向鍵平移，用加號或減號縮放"></canvas>
           <div id="tooltip" class="tooltip" hidden></div>
         </section>
         <section class="workspace-grid">
@@ -67,9 +247,17 @@
             <dl id="explanationList" class="mc-grid"></dl>
             <ul id="diagnosticsList" class="plain-list"></ul>
           </article>
+          <article id="ai-insights-panel">
+            <h2>AI Insights</h2>
+            <ol id="portfolioInsightList" class="scenario-list"></ol>
+          </article>
           <article id="scenario-panel">
             <h2 data-i18n="scenarioComparison"></h2>
             <ol id="scenarioList" class="scenario-list"></ol>
+          </article>
+          <article id="economic-scenario-panel">
+            <h2>經濟情境</h2>
+            <ol id="economicScenarioList" class="scenario-list"></ol>
           </article>
           <article id="ranking-panel">
             <h2 data-i18n="optimizationRanking"></h2>
@@ -78,6 +266,10 @@
           <article id="comparison-matrix-panel">
             <h2 data-i18n="comparisonMatrix"></h2>
             <div id="comparisonMatrix" class="matrix-grid"></div>
+          </article>
+          <article id="portfolio-comparison-panel">
+            <h2>投資組合比較</h2>
+            <ol id="portfolioComparisonList" class="scenario-list"></ol>
           </article>
           <article id="transparency-panel">
             <h2 data-i18n="transparencyDiagnostics"></h2>
@@ -94,8 +286,8 @@
           </article>
           <article id="monte-carlo-panel">
             <h2 data-i18n="monteCarlo"></h2>
-            <progress id="progress" max="100" value="0"></progress>
-            <p id="workerStatus">待執行</p>
+            <progress id="progress" max="100" value="0" aria-label="蒙地卡羅模擬進度"></progress>
+            <p id="workerStatus" aria-live="polite">待執行</p>
             <dl class="mc-grid" aria-label="蒙地卡羅模擬結果">
               <div><dt>P10</dt><dd id="mcP10">-</dd></div>
               <div><dt>P25</dt><dd id="mcP25">-</dd></div>
@@ -106,6 +298,84 @@
               <div><dt>最差情境</dt><dd id="mcWorst">-</dd></div>
               <div><dt>成功率</dt><dd id="mcSuccess">-</dd></div>
             </dl>
+          </article>
+          <article id="rebalancing-panel">
+            <h2>再平衡比較</h2>
+            <ol id="rebalancingList" class="scenario-list"></ol>
+            <div id="driftMatrix" class="matrix-grid"></div>
+          </article>
+          <article id="leverage-panel">
+            <h2>槓桿模擬</h2>
+            <dl class="mc-grid" aria-label="槓桿模擬結果">
+              <div><dt>投資資產</dt><dd id="leverageInvestment">-</dd></div>
+              <div><dt>剩餘債務</dt><dd id="leverageDebt">-</dd></div>
+              <div><dt>淨資產</dt><dd id="leverageNetWorth">-</dd></div>
+              <div><dt>總利息</dt><dd id="leverageInterest">-</dd></div>
+              <div><dt>槓桿倍數</dt><dd id="leverageRatio">-</dd></div>
+              <div><dt>扣息淨報酬</dt><dd id="leverageNetReturn">-</dd></div>
+            </dl>
+            <div id="distributionBars" class="distribution-bars" aria-label="蒙地卡羅分位分布"></div>
+          </article>
+          <article id="crash-panel">
+            <h2>壓力測試</h2>
+            <dl class="mc-grid" aria-label="壓力測試結果">
+              <div><dt>情境</dt><dd id="crashLabel">-</dd></div>
+              <div><dt>最大回撤</dt><dd id="crashDrawdown">-</dd></div>
+              <div><dt>恢復年數</dt><dd id="crashRecovery">-</dd></div>
+              <div><dt>水下期間</dt><dd id="crashUnderwater">-</dd></div>
+              <div><dt>最長水下</dt><dd id="crashLongestUnderwater">-</dd></div>
+            </dl>
+            <ol id="drawdownPeriodList" class="scenario-list"></ol>
+          </article>
+          <article id="fire-panel">
+            <h2>FIRE 模擬</h2>
+            <dl class="mc-grid" aria-label="FIRE 模擬結果">
+              <div><dt>目標資產</dt><dd id="fireTarget">-</dd></div>
+              <div><dt>達成年數</dt><dd id="fireYear">-</dd></div>
+              <div><dt>預估年齡</dt><dd id="fireAge">-</dd></div>
+              <div><dt>退休成功率</dt><dd id="fireSuccess">-</dd></div>
+              <div><dt>耗盡年</dt><dd id="fireDepletion">-</dd></div>
+              <div><dt>退休期末資產</dt><dd id="fireFinal">-</dd></div>
+              <div><dt>需月投入</dt><dd id="fireRequiredMonthly">-</dd></div>
+              <div><dt>目標 CAGR</dt><dd id="fireTargetCagr">-</dd></div>
+            </dl>
+          </article>
+          <article id="tax-panel">
+            <h2>稅務模擬</h2>
+            <dl class="mc-grid" aria-label="稅務模擬結果">
+              <div><dt>稅前資產</dt><dd id="taxBefore">-</dd></div>
+              <div><dt>稅後資產</dt><dd id="taxAfter">-</dd></div>
+              <div><dt>股息稅拖累</dt><dd id="taxDividendDrag">-</dd></div>
+              <div><dt>資本利得稅</dt><dd id="taxCapitalGains">-</dd></div>
+              <div><dt>遺產稅</dt><dd id="taxEstate">-</dd></div>
+              <div><dt>有效拖累率</dt><dd id="taxEffectiveRate">-</dd></div>
+            </dl>
+          </article>
+          <article id="dividend-calendar-panel">
+            <h2>股息月曆</h2>
+            <dl class="mc-grid" aria-label="股息預估">
+              <div><dt>年股息收入</dt><dd id="dividendAnnualIncome">-</dd></div>
+              <div><dt>月被動收入</dt><dd id="dividendMonthlyIncome">-</dd></div>
+              <div><dt>再投入股息</dt><dd id="dividendReinvested">-</dd></div>
+            </dl>
+            <ol id="dividendCalendar" class="scenario-list"></ol>
+          </article>
+          <article id="optimization-panel">
+            <h2>投資組合最佳化</h2>
+            <dl class="mc-grid" aria-label="最佳化結果">
+              <div><dt>風險分數</dt><dd id="optimizationScore">-</dd></div>
+              <div><dt>加權 CAGR</dt><dd id="optimizationCagr">-</dd></div>
+              <div><dt>波動率</dt><dd id="optimizationVolatility">-</dd></div>
+            </dl>
+            <ol id="optimizationList" class="scenario-list"></ol>
+            <h3>效率前緣</h3>
+            <ol id="efficientFrontierList" class="scenario-list"></ol>
+            <h3>調整建議</h3>
+            <ol id="optimizationSuggestionList" class="scenario-list"></ol>
+          </article>
+          <article id="live-quotes-panel">
+            <h2>ETF 資料</h2>
+            <ol id="liveQuoteList" class="scenario-list"></ol>
           </article>
           <article id="debugPanel" hidden>
             <h2 data-i18n="debug"></h2>
@@ -121,6 +391,21 @@
     <script src="core/compoundGrowth.js"></script>
     <script src="core/monteCarlo.js"></script>
     <script src="core/historicalReplay.js"></script>
+    <script src="domain/etfMetadata.js"></script>
+    <script src="domain/portfolioEngine.js"></script>
+    <script src="domain/rebalancingEngine.js"></script>
+    <script src="domain/leverageEngine.js"></script>
+    <script src="domain/drawdownEngine.js"></script>
+    <script src="domain/fireEngine.js"></script>
+    <script src="domain/taxEngine.js"></script>
+    <script src="domain/dividendCalendar.js"></script>
+    <script src="domain/optimizationEngine.js"></script>
+    <script src="domain/portfolioComparison.js"></script>
+    <script src="domain/portfolioInsights.js"></script>
+    <script src="domain/scenarioEngine.js"></script>
+    <script src="services/cloudSyncStub.js"></script>
+    <script src="services/liveEtfData.js"></script>
+    <script src="services/savedPortfolios.js"></script>
     <script src="domain/portfolioOrchestration.js"></script>
     <script src="charts/VisualizationModel.js"></script>
     <script src="charts/ChartRenderer.js"></script>

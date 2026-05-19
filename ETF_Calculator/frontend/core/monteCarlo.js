@@ -1,7 +1,7 @@
 function runMonteCarloFallback(input, iterations, seed) {
   const random = createSeededRandom(seed);
-  const values = Array.from({ length: iterations }, () => runMonteCarloPath(input, random)).sort((a, b) => a - b);
-  return summarizeMonteCarloValues(input, values);
+  const paths = Array.from({ length: iterations }, () => runMonteCarloPath(input, random));
+  return summarizeMonteCarloPaths(input, paths);
 }
 
 function runMonteCarloBatched(input, iterations, seed, options = {}) {
@@ -22,8 +22,7 @@ function runMonteCarloBatched(input, iterations, seed, options = {}) {
         scheduleBatch(runBatch);
         return;
       }
-      values.sort((a, b) => a - b);
-      resolve(summarizeMonteCarloValues(input, values));
+      resolve(summarizeMonteCarloPaths(input, values));
     }
 
     runBatch();
@@ -36,6 +35,16 @@ function scheduleBatch(callback) {
     return;
   }
   setTimeout(callback, 0);
+}
+
+function summarizeMonteCarloPaths(input, paths) {
+  const values = paths.map((path) => path.finalValue).sort((a, b) => a - b);
+  const percentilePaths = summarizeMonteCarloPercentilePaths(paths, input.years);
+  return {
+    ...summarizeMonteCarloValues(input, values),
+    paths: paths.slice(0, 120).map((path) => path.points),
+    percentilePaths
+  };
 }
 
 function summarizeMonteCarloValues(input, values) {
@@ -59,14 +68,35 @@ function summarizeMonteCarloValues(input, values) {
 
 function runMonteCarloPath(input, random) {
   let value = input.initialAmount;
+  const points = [];
   for (let year = 0; year < input.years; year += 1) {
     const annualReturn = input.annualReturn + input.volatility * normalDistribution(random);
     const monthlyRate = Math.pow(1 + annualReturn + input.dividendYield, 1 / 12) - 1;
     for (let month = 0; month < 12; month += 1) {
       value = value * (1 + monthlyRate) + input.monthlyContribution;
     }
+    points.push({ year: year + 1, value });
   }
-  return value;
+  return { finalValue: value, points };
+}
+
+function summarizeMonteCarloPercentilePaths(paths, years) {
+  const result = [];
+  for (let year = 1; year <= years; year += 1) {
+    const values = paths
+      .map((path) => {
+        const point = path.points[year - 1];
+        return point ? point.value : 0;
+      })
+      .sort((a, b) => a - b);
+    result.push({
+      year,
+      p10: percentile(values, 0.1),
+      p50: percentile(values, 0.5),
+      p90: percentile(values, 0.9)
+    });
+  }
+  return result;
 }
 
 function createSeededRandom(seed) {

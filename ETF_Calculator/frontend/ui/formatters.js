@@ -2,6 +2,12 @@ function formatCurrency(value) {
   return `NT$ ${Math.round(value).toLocaleString("zh-TW")}`;
 }
 
+function formatCurrencyByCode(value, currency) {
+  const prefix = currency === "USD" ? "US$" : "NT$";
+  const locale = currency === "USD" ? "en-US" : "zh-TW";
+  return `${prefix} ${Math.round(value).toLocaleString(locale)}`;
+}
+
 function formatPercent(value) {
   return `${(value * 100).toFixed(2)}%`;
 }

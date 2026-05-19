@@ -11,56 +11,26 @@
 </head>
 <body>
   <header class="site-header">
-    <div>
+    <div class="header-intro">
       <p class="eyebrow">綜所稅試算</p>
       <h1>台灣綜合所得稅試算工具</h1>
       <p id="versionInfo" class="muted">載入年度稅率資料中</p>
     </div>
-    <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">深色主題</button>
+    <div class="header-toolbar">
+      <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">深色主題</button>
+      <label class="toolbar-field">
+        <span id="yearSelectionTitle">試算年度</span>
+        <select id="taxYear" name="year"></select>
+      </label>
+      <button id="yearDataToggle" class="accordion-toggle" type="button" aria-expanded="false" aria-controls="yearDataContent">
+        <span>年度資料</span>
+        <span class="chevron">⌄</span>
+      </button>
+    </div>
   </header>
 
   <main class="workspace-shell">
-    <aside class="panel year-panel tax-knowledge-panel" aria-labelledby="yearSelectionTitle">
-      <div class="year-panel-header">
-        <label>
-          <span id="yearSelectionTitle">試算年度</span>
-          <select id="taxYear" name="year"></select>
-        </label>
-        <div>
-          <h2>年度固定資料</h2>
-          <p class="muted">依選擇年度顯示扣除額與級距數據</p>
-        </div>
-        <button id="yearDataToggle" class="year-data-toggle" type="button" aria-expanded="false" aria-controls="yearDataContent"
-onclick="
-const c=document.getElementById('yearDataContent');
-const open=this.getAttribute('aria-expanded') === 'true';
-
-if(open){
-  c.style.display='none';
-  this.setAttribute('aria-expanded','false');
-  this.textContent='展開';
-}else{
-  c.style.display='grid';
-  this.setAttribute('aria-expanded','true');
-  this.textContent='收合';
-}
-">
-展開
-</button>
-      </div>
-      <div id="yearDataContent" class="year-data-grid" style="display:none;">
-        <section class="result-block">
-          <h3>扣除額資料</h3>
-          <div id="yearDeductionData" class="breakdown"></div>
-        </section>
-        <section class="result-block">
-          <h3>稅率級距</h3>
-          <div id="yearBracketData" class="breakdown"></div>
-        </section>
-      </div>
-    </aside>
-
-    <aside class="panel household-panel" aria-labelledby="householdPanelTitle">
+    <aside class="panel panel-supporting household-panel" aria-labelledby="householdPanelTitle">
       <h2 id="householdPanelTitle">家庭資料工作區</h2>
       <p class="muted">本人、配偶與扶養親屬</p>
       <div class="workspace-note">
@@ -69,15 +39,27 @@ if(open){
       </div>
     </aside>
 
-    <section class="panel input-panel person-editor-panel" aria-labelledby="calculatorTitle">
+    <section class="panel panel-secondary input-panel person-editor-panel" aria-labelledby="calculatorTitle">
       <h2 id="calculatorTitle">試算資料</h2>
       <form id="taxForm" class="tax-form">
-        <label>
-          申報模式
+        <label class="form-section basic-data-section">
+          <span class="form-section-title">基本資料</span>
+          <span>申報模式</span>
           <select id="filingMode" name="filingMode">
             <option value="single">單獨申報</option>
             <option value="joint">夫妻合併申報</option>
             <option value="auto">自動比較最佳方案</option>
+          </select>
+          <span>股利課稅方式</span>
+          <select id="dividendTaxMode" name="dividendTaxMode">
+            <option value="auto">自動最佳化</option>
+            <option value="combined">合併計稅</option>
+            <option value="separate">分離課稅</option>
+          </select>
+          <span>顯示模式</span>
+          <select id="disclosureMode" name="disclosureMode">
+            <option value="beginner">基本模式</option>
+            <option value="advanced">進階模式</option>
           </select>
         </label>
 
@@ -106,26 +88,74 @@ if(open){
         </fieldset>
 
         <details open>
-          <summary>列舉扣除額</summary>
-          <div class="details-grid">
-            <label>本人保險費<input name="insuranceSelf" type="number" min="0" step="1" value="0"></label>
-            <label>配偶保險費<input name="insuranceSpouse" type="number" min="0" step="1" value="0"></label>
-            <label>扶養親屬保險費<input name="insuranceDependents" type="number" min="0" step="1" value="0"></label>
-            <label>全民健保費<input name="nationalHealthInsurance" type="number" min="0" step="1" value="0"></label>
-            <label>醫療費<input name="medical" type="number" min="0" step="1" value="0"></label>
-            <label>生育費<input name="childbirth" type="number" min="0" step="1" value="0"></label>
-            <label>一般捐贈<input name="donationGeneral" type="number" min="0" step="1" value="0"></label>
-            <label>政治獻金<input name="donationPolitical" type="number" min="0" step="1" value="0"></label>
-            <label>公益團體捐贈<input name="donationPublic" type="number" min="0" step="1" value="0"></label>
-            <label>災害損失金額<input name="disasterLoss" type="number" min="0" step="1" value="0"></label>
+          <summary>扣除額</summary>
+          <div class="deduction-sections">
+          <section class="form-section">
+            <h3 class="form-section-title">列舉扣除額</h3>
+            <div class="deduction-person-grid">
+              <section class="form-section">
+                <h4 class="form-section-title">本人</h4>
+                <div class="details-grid">
+                  <label>保險費<input name="taxpayerInsurance" type="number" min="0" step="1" value="0"></label>
+                  <label>全民健保費<input name="taxpayerNationalHealthInsurance" type="number" min="0" step="1" value="0"></label>
+                  <label>醫療費<input name="taxpayerMedical" type="number" min="0" step="1" value="0"></label>
+                  <label>生育費<input name="taxpayerChildbirth" type="number" min="0" step="1" value="0"></label>
+                  <label>一般捐贈<input name="taxpayerDonationGeneral" type="number" min="0" step="1" value="0"></label>
+                  <label>政治獻金<input name="taxpayerDonationPolitical" type="number" min="0" step="1" value="0"></label>
+                  <label>公益團體捐贈<input name="taxpayerDonationPublic" type="number" min="0" step="1" value="0"></label>
+                  <label>災害損失金額<input name="taxpayerDisasterLoss" type="number" min="0" step="1" value="0"></label>
+                </div>
+              </section>
+              <section class="form-section">
+                <h4 class="form-section-title">配偶</h4>
+                <div class="details-grid">
+                  <label>保險費<input name="spouseInsurance" type="number" min="0" step="1" value="0"></label>
+                  <label>全民健保費<input name="spouseNationalHealthInsurance" type="number" min="0" step="1" value="0"></label>
+                  <label>醫療費<input name="spouseMedical" type="number" min="0" step="1" value="0"></label>
+                  <label>生育費<input name="spouseChildbirth" type="number" min="0" step="1" value="0"></label>
+                  <label>一般捐贈<input name="spouseDonationGeneral" type="number" min="0" step="1" value="0"></label>
+                  <label>政治獻金<input name="spouseDonationPolitical" type="number" min="0" step="1" value="0"></label>
+                  <label>公益團體捐贈<input name="spouseDonationPublic" type="number" min="0" step="1" value="0"></label>
+                  <label>災害損失金額<input name="spouseDisasterLoss" type="number" min="0" step="1" value="0"></label>
+                </div>
+              </section>
+            </div>
+          </section>
+          <section class="form-section">
+            <h3 class="form-section-title">房貸 / 房租</h3>
+            <div class="details-grid">
             <label class="check"><input name="isSelfUseResidence" type="checkbox">是否自用住宅</label>
             <label class="check"><input name="hasHouseholdRegistration" type="checkbox">是否設戶籍</label>
             <label class="check"><input name="isRented" type="checkbox">是否出租</label>
             <label>房貸利息支出<input name="mortgageInterest" type="number" min="0" step="1" value="0"></label>
             <label>租金支出<input name="rent" type="number" min="0" step="1" value="0"></label>
+            </div>
+          </section>
+          <section class="form-section">
+            <h3 class="form-section-title">其他特別扣除額</h3>
+            <div class="details-grid">
             <label>長期照顧人數<input name="longTermCareCount" type="number" min="0" step="1" value="0"></label>
             <label>幼兒學前人數<input name="preschoolChildren" type="number" min="0" step="1" value="0"></label>
             <label>大專院校學費人數<input name="educationCount" type="number" min="0" step="1" value="0"></label>
+            </div>
+          </section>
+          </div>
+        </details>
+
+        <details>
+          <summary>情境與年度模擬</summary>
+          <div class="details-grid">
+            <label class="check"><input name="forecastMode" type="checkbox">使用上方年度資料直接試算</label>
+            <label>試算年度<input name="forecastYear" type="number" min="2024" max="2100" step="1" readonly></label>
+            <label>薪資變動<input name="scenarioSalaryChange" type="number" step="1" value="0"></label>
+            <label>股利變動<input name="scenarioDividendChange" type="number" step="1" value="0"></label>
+            <label>利息變動<input name="scenarioInterestChange" type="number" step="1" value="0"></label>
+            <label>房貸利息變動<input name="scenarioMortgageInterestChange" type="number" step="1" value="0"></label>
+          </div>
+          <div class="scenario-actions">
+            <button id="quickSaveScenario" class="secondary-button" type="button">Quick Save</button>
+            <button id="loadSavedScenario" class="secondary-button" type="button">Load</button>
+            <button id="deleteSavedScenario" class="secondary-button" type="button">Delete</button>
           </div>
         </details>
 
@@ -136,15 +166,17 @@ if(open){
       <p id="errorMessage" class="error" role="alert" hidden>無法載入稅率資料</p>
     </section>
 
-    <section class="panel result-panel scenario-analysis-panel" aria-labelledby="resultTitle">
+    <div class="results-stack">
+    <section class="panel panel-primary result-panel" aria-labelledby="resultTitle">
       <h2 id="resultTitle">試算結果</h2>
       <dl class="results">
-        <div><dt>最佳申報方式</dt><dd id="bestStrategy">-</dd></div>
+        <div class="tax-hero"><dt>應納稅額</dt><dd id="taxAmount" class="tax-total">-</dd></div>
         <div><dt>總所得</dt><dd id="grossIncome">-</dd></div>
         <div><dt>總扣除額</dt><dd id="totalDeductions">-</dd></div>
-        <div><dt>綜合所得淨額</dt><dd id="taxableIncome">-</dd></div>
-        <div><dt>應納稅額</dt><dd id="taxAmount">-</dd></div>
+        <div><dt>節稅金額</dt><dd id="savingAmount">-</dd></div>
         <div><dt>有效稅率</dt><dd id="effectiveRate">-</dd></div>
+        <div><dt>最佳申報方式</dt><dd id="bestStrategy">-</dd></div>
+        <div><dt>綜合所得淨額</dt><dd id="taxableIncome">-</dd></div>
         <div><dt>邊際稅率</dt><dd id="marginalRate">-</dd></div>
       </dl>
       <div class="result-grid">
@@ -181,6 +213,102 @@ if(open){
       </div>
     </section>
 
+    <section class="panel panel-secondary planning-panel" aria-labelledby="planningTitle">
+      <h2 id="planningTitle">家庭申報最佳化</h2>
+      <div class="result-grid">
+        <section class="result-block">
+          <h3>明年預估</h3>
+          <div id="forecastSummary" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>Forecast Dashboard</h3>
+          <div id="forecastDashboard" class="breakdown"></div>
+        </section>
+        <section class="result-block analysis-block">
+          <h3>最佳方案分析</h3>
+          <div id="combinationRecommendation" class="analysis"></div>
+        </section>
+      </div>
+      <section class="result-block">
+        <h3>五年稅負趨勢</h3>
+        <div id="multiYearTrend" class="trend-bars"></div>
+      </section>
+      <section class="result-block">
+        <h3>家庭成員資料</h3>
+        <div id="householdMemberSummary" class="breakdown"></div>
+      </section>
+      <section class="result-block">
+        <h3>全組合試算</h3>
+        <div class="table-controls">
+          <label class="check"><input id="filterRecommended" type="checkbox">只看推薦</label>
+          <label class="check"><input id="filterRefund" type="checkbox">只看退稅</label>
+          <label class="check"><input id="filterFivePercent" type="checkbox">只看 5% 級距</label>
+          <label>搜尋組合<input id="combinationSearch" type="search" placeholder="輸入姓名"></label>
+        </div>
+        <div class="table-scroll">
+          <table class="combination-table">
+            <thead>
+              <tr>
+                <th><button class="table-sort" type="button" data-sort="combinationName">申報組合</button></th>
+                <th><button class="table-sort" type="button" data-sort="taxBracket">稅率級距</button></th>
+                <th><button class="table-sort" type="button" data-sort="taxableIncome">課稅所得</button></th>
+                <th><button class="table-sort" type="button" data-sort="payableTax">應補稅 / 退稅</button></th>
+                <th><button class="table-sort" type="button" data-sort="effectiveRate">有效稅率</button></th>
+                <th><button class="table-sort" type="button" data-sort="recommendationScore">分數</button></th>
+                <th>是否推薦</th>
+              </tr>
+            </thead>
+            <tbody id="combinationResults"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel panel-secondary advanced-planning-panel" aria-labelledby="advancedPlanningTitle">
+      <h2 id="advancedPlanningTitle">Recommendation Dashboard</h2>
+      <div class="result-grid">
+        <section class="result-block">
+          <h3>方案差異比較</h3>
+          <div id="deltaComparison" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>Tax Impact</h3>
+          <div id="taxImpactFactors" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>Smart Warnings</h3>
+          <div id="smartWarnings" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>Interactive Tax Breakdown</h3>
+          <details open>
+            <summary>展開稅額組成</summary>
+            <div id="interactiveTaxBreakdown" class="breakdown"></div>
+          </details>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel panel-supporting year-panel tax-knowledge-panel" aria-labelledby="taxKnowledgeTitle">
+      <div class="year-panel-header">
+        <div>
+          <h2 id="taxKnowledgeTitle">年度固定資料</h2>
+          <p class="muted">依選擇年度顯示扣除額與級距數據</p>
+        </div>
+      </div>
+      <div id="yearDataContent" class="year-data-grid" hidden>
+        <section class="result-block">
+          <h3>扣除額資料</h3>
+          <div id="yearDeductionData" class="breakdown"></div>
+        </section>
+        <section class="result-block">
+          <h3>稅率級距</h3>
+          <div id="yearBracketData" class="breakdown"></div>
+        </section>
+      </div>
+    </section>
+    </div>
+
   </main>
 
   <footer>
@@ -193,6 +321,7 @@ if(open){
   <script src="js/dependent-engine.js"></script>
   <script src="js/deduction-engine.js"></script>
   <script src="js/tax-engine.js"></script>
+  <script src="js/planning-engine.js"></script>
   <script src="js/household-model.js"></script>
   <script src="js/validation-engine.js"></script>
   <script src="js/orchestration.js"></script>

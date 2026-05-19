@@ -4,6 +4,22 @@
     currentYear: null,
     formData: {},
     filingMode: "auto",
+    dividendTaxMode: "auto",
+    disclosureMode: "beginner",
+    forecast: {
+      forecastMode: false,
+      forecastYear: null,
+      salaryGrowthRate: 0,
+      dividendGrowthRate: 0,
+      interestGrowthRate: 0
+    },
+    householdMembers: [],
+    scenarioOverrides: {
+      salaryChange: 0,
+      dividendChange: 0,
+      interestChange: 0,
+      mortgageInterestChange: 0
+    },
     taxpayer: {
       salaryIncome: 800000,
       professionalIncome: 0,

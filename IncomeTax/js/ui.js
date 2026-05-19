@@ -55,10 +55,25 @@
     if (!button || !content) {
       return;
     }
-    const isOpen = button.getAttribute("aria-expanded") === "true";
-    button.setAttribute("aria-expanded", String(!isOpen));
-    button.textContent = isOpen ? "展開" : "收合";
-    content.hidden = isOpen;
+    const nextHiddenState = !content.hidden;
+    content.hidden = nextHiddenState;
+    syncYearDataToggle();
+  }
+
+  function syncYearDataToggle() {
+    const button = document.getElementById("yearDataToggle");
+    const content = document.getElementById("yearDataContent");
+    if (!button || !content) {
+      return;
+    }
+    const expanded = !content.hidden;
+    button.setAttribute("aria-expanded", String(expanded));
+    const label = button.querySelector("span:first-child");
+    if (label) {
+      label.textContent = expanded ? "收合年度資料" : "年度資料";
+    } else {
+      button.textContent = expanded ? "收合" : "展開";
+    }
   }
 
   function numberFromForm(formData, name) {
@@ -69,10 +84,43 @@
     return formData.get(name) === "on";
   }
 
+  function money(value) {
+    return window.IncomeTaxApp.utils.formatCurrency(window.IncomeTaxApp.engine.toNumber(value));
+  }
+
+  function personDeductionsFromForm(formData, prefix) {
+    return {
+      insurance: numberFromForm(formData, prefix + "Insurance"),
+      nationalHealthInsurance: numberFromForm(formData, prefix + "NationalHealthInsurance"),
+      medical: numberFromForm(formData, prefix + "Medical"),
+      childbirth: numberFromForm(formData, prefix + "Childbirth"),
+      donationGeneral: numberFromForm(formData, prefix + "DonationGeneral"),
+      donationPolitical: numberFromForm(formData, prefix + "DonationPolitical"),
+      donationPublic: numberFromForm(formData, prefix + "DonationPublic"),
+      disasterLoss: numberFromForm(formData, prefix + "DisasterLoss")
+    };
+  }
+
   function getInput(form) {
     const formData = new FormData(form);
     return {
       filingMode: formData.get("filingMode") || "auto",
+      dividendTaxMode: formData.get("dividendTaxMode") || "auto",
+      disclosureMode: formData.get("disclosureMode") || "beginner",
+      forecast: {
+        forecastMode: boolFromForm(formData, "forecastMode"),
+        forecastYear: numberFromForm(formData, "forecastYear"),
+        salaryGrowthRate: 0,
+        dividendGrowthRate: 0,
+        interestGrowthRate: 0
+      },
+      householdMembers: window.IncomeTaxApp.state.householdMembers || [],
+      scenarioOverrides: {
+        salaryChange: numberFromForm(formData, "scenarioSalaryChange"),
+        dividendChange: numberFromForm(formData, "scenarioDividendChange"),
+        interestChange: numberFromForm(formData, "scenarioInterestChange"),
+        mortgageInterestChange: numberFromForm(formData, "scenarioMortgageInterestChange")
+      },
       taxpayer: {
         salaryIncome: numberFromForm(formData, "salaryIncome"),
         professionalIncome: numberFromForm(formData, "professionalIncome"),
@@ -89,6 +137,8 @@
       },
       dependents: window.IncomeTaxApp.state.dependents,
       deductions: {
+        taxpayer: personDeductionsFromForm(formData, "taxpayer"),
+        spouse: personDeductionsFromForm(formData, "spouse"),
         insuranceSelf: numberFromForm(formData, "insuranceSelf"),
         insuranceSpouse: numberFromForm(formData, "insuranceSpouse"),
         insuranceDependents: numberFromForm(formData, "insuranceDependents"),
@@ -100,9 +150,13 @@
         donationPublic: numberFromForm(formData, "donationPublic"),
         disasterLoss: numberFromForm(formData, "disasterLoss"),
         isSelfUseResidence: boolFromForm(formData, "isSelfUseResidence"),
+        isOwnerOccupied: boolFromForm(formData, "isSelfUseResidence"),
         hasHouseholdRegistration: boolFromForm(formData, "hasHouseholdRegistration"),
+        isRegisteredResidence: boolFromForm(formData, "hasHouseholdRegistration"),
         isRented: boolFromForm(formData, "isRented"),
+        isRentalProperty: boolFromForm(formData, "isRented"),
         mortgageInterest: numberFromForm(formData, "mortgageInterest"),
+        mortgageInterestExpense: numberFromForm(formData, "mortgageInterest"),
         rent: numberFromForm(formData, "rent"),
         longTermCareCount: numberFromForm(formData, "longTermCareCount"),
         preschoolChildren: numberFromForm(formData, "preschoolChildren"),
@@ -114,12 +168,47 @@
   function setFormValues(form, state) {
     const values = Object.assign({}, state.taxpayer, state.deductions, {
       filingMode: state.filingMode,
+      dividendTaxMode: state.dividendTaxMode || "auto",
+      disclosureMode: state.disclosureMode || "beginner",
+      forecastMode: state.forecast && state.forecast.forecastMode,
+      forecastYear: state.forecast && state.forecast.forecastYear,
+      salaryGrowthRate: state.forecast && state.forecast.salaryGrowthRate,
+      dividendGrowthRate: state.forecast && state.forecast.dividendGrowthRate,
+      interestGrowthRate: state.forecast && state.forecast.interestGrowthRate,
+      scenarioSalaryChange: state.scenarioOverrides && state.scenarioOverrides.salaryChange,
+      scenarioDividendChange: state.scenarioOverrides && state.scenarioOverrides.dividendChange,
+      scenarioInterestChange: state.scenarioOverrides && state.scenarioOverrides.interestChange,
+      scenarioMortgageInterestChange: state.scenarioOverrides && state.scenarioOverrides.mortgageInterestChange,
       spouseSalaryIncome: state.spouse.salaryIncome,
       spouseProfessionalIncome: state.spouse.professionalIncome,
       spouseDividendIncome: state.spouse.dividendIncome,
       spouseInterestIncome: state.spouse.interestIncome,
       spouseOtherIncome: state.spouse.otherIncome
     });
+    if (state.deductions && state.deductions.taxpayer) {
+      Object.assign(values, {
+        taxpayerInsurance: state.deductions.taxpayer.insurance,
+        taxpayerNationalHealthInsurance: state.deductions.taxpayer.nationalHealthInsurance,
+        taxpayerMedical: state.deductions.taxpayer.medical,
+        taxpayerChildbirth: state.deductions.taxpayer.childbirth,
+        taxpayerDonationGeneral: state.deductions.taxpayer.donationGeneral,
+        taxpayerDonationPolitical: state.deductions.taxpayer.donationPolitical,
+        taxpayerDonationPublic: state.deductions.taxpayer.donationPublic,
+        taxpayerDisasterLoss: state.deductions.taxpayer.disasterLoss
+      });
+    }
+    if (state.deductions && state.deductions.spouse) {
+      Object.assign(values, {
+        spouseInsurance: state.deductions.spouse.insurance,
+        spouseNationalHealthInsurance: state.deductions.spouse.nationalHealthInsurance,
+        spouseMedical: state.deductions.spouse.medical,
+        spouseChildbirth: state.deductions.spouse.childbirth,
+        spouseDonationGeneral: state.deductions.spouse.donationGeneral,
+        spouseDonationPolitical: state.deductions.spouse.donationPolitical,
+        spouseDonationPublic: state.deductions.spouse.donationPublic,
+        spouseDisasterLoss: state.deductions.spouse.disasterLoss
+      });
+    }
     Object.keys(values).forEach(function (key) {
       if (form.elements[key] !== undefined) {
         if (form.elements[key].type === "checkbox") {
@@ -143,6 +232,19 @@
         "<label>身份類型<select data-field=\"relation\">" + relationOptions.map(function (option) {
           return "<option value=\"" + option[0] + "\"" + (dependent.relation === option[0] ? " selected" : "") + ">" + option[1] + "</option>";
         }).join("") + "</select></label>",
+        "<label>薪資所得<input data-field=\"salaryIncome\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.salaryIncome || 0) + "\"></label>",
+        "<label>執行業務所得<input data-field=\"professionalIncome\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.professionalIncome || 0) + "\"></label>",
+        "<label>股利所得<input data-field=\"dividendIncome\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.dividendIncome || 0) + "\"></label>",
+        "<label>利息所得<input data-field=\"interestIncome\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.interestIncome || 0) + "\"></label>",
+        "<label>其他所得<input data-field=\"otherIncome\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.otherIncome || 0) + "\"></label>",
+        "<label>保險費<input data-field=\"insurance\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.insurance || 0) + "\"></label>",
+        "<label>全民健保費<input data-field=\"nationalHealthInsurance\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.nationalHealthInsurance || 0) + "\"></label>",
+        "<label>醫療費<input data-field=\"medical\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.medical || 0) + "\"></label>",
+        "<label>生育費<input data-field=\"childbirth\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.childbirth || 0) + "\"></label>",
+        "<label>一般捐贈<input data-field=\"donationGeneral\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.donationGeneral || 0) + "\"></label>",
+        "<label>政治獻金<input data-field=\"donationPolitical\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.donationPolitical || 0) + "\"></label>",
+        "<label>公益團體捐贈<input data-field=\"donationPublic\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.donationPublic || 0) + "\"></label>",
+        "<label>災害損失金額<input data-field=\"disasterLoss\" type=\"number\" min=\"0\" step=\"1\" value=\"" + escapeHtml(dependent.disasterLoss || 0) + "\"></label>",
         "<label class=\"check\"><input data-field=\"isSenior\" type=\"checkbox\"" + (dependent.isSenior ? " checked" : "") + ">是否滿 70 歲</label>",
         "<label class=\"check\"><input data-field=\"disabled\" type=\"checkbox\"" + (dependent.disabled ? " checked" : "") + ">是否身心障礙</label>",
         "<label class=\"check\"><input data-field=\"sameHousehold\" type=\"checkbox\"" + (dependent.sameHousehold ? " checked" : "") + ">是否同戶籍</label>",
@@ -161,27 +263,20 @@
   function renderResult(result) {
     const active = result.activeResult;
     document.getElementById("bestStrategy").textContent = result.recommendedLabel;
-    document.getElementById("grossIncome").textContent = window.IncomeTaxApp.utils.formatCurrency(active.grossIncome);
-    document.getElementById("totalDeductions").textContent = window.IncomeTaxApp.utils.formatCurrency(active.totalDeductions);
-    document.getElementById("taxableIncome").textContent = window.IncomeTaxApp.utils.formatCurrency(active.taxableIncome);
-    document.getElementById("taxAmount").textContent = window.IncomeTaxApp.utils.formatCurrency(active.taxAmount);
+    document.getElementById("grossIncome").textContent = money(active.grossIncome);
+    document.getElementById("totalDeductions").textContent = money(active.totalDeductions);
+    document.getElementById("taxableIncome").textContent = money(active.taxableIncome);
+    document.getElementById("taxAmount").textContent = active.finalTaxState === "refund" ? "退稅 " + money(active.refundAmount) : money(active.payableTax);
+    document.getElementById("savingAmount").textContent = money(result.saving);
     document.getElementById("effectiveRate").textContent = window.IncomeTaxApp.utils.formatPercent(active.effectiveRate);
     document.getElementById("marginalRate").textContent = window.IncomeTaxApp.utils.formatPercent(active.marginalRate);
     document.getElementById("deductionBreakdown").innerHTML = [
-      "利息所得：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.interestIncome),
-      "免稅額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.exemption),
-      "標準扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.standard),
-      "列舉扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.itemized),
-      "基本生活費總額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.basicLiving.total),
-      "基本生活費差額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.basicLivingDifference),
-      "薪資扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.salary),
-      "儲蓄投資特別扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.savings),
-      "房貸利息扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.mortgageInterest),
-      "房租扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.rent),
-      "教育扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.education),
-      "長照扣除額：" + window.IncomeTaxApp.utils.formatCurrency(active.deductions.longTermCare),
-      "扣除方式：" + active.deductions.mode
-    ].join("<br>");
+      "<section class=\"breakdown-group\"><h4>所得</h4><p>利息所得：<strong>" + money(active.deductions.interestIncome) + "</strong></p></section>",
+      "<section class=\"breakdown-group\"><h4>扣除額</h4><p>免稅額：<strong>" + money(active.deductions.exemption) + "</strong></p><p>標準扣除額：<strong>" + money(active.deductions.standard) + "</strong></p><p>列舉扣除額：<strong>" + money(active.deductions.itemized) + "</strong></p><p>基本生活費差額：<strong>" + money(active.deductions.basicLivingDifference) + "</strong></p></section>",
+      "<section class=\"breakdown-group\"><h4>股利課稅</h4><p>股利所得：<strong>" + money(active.dividendIncome) + "</strong></p><p>股利課稅方式：<strong>" + escapeHtml(active.selectedDividendTaxMode === "separate" ? "分離課稅（較有利）" : "合併計稅（較有利）") + "</strong></p><p>股利可抵減稅額：<strong>" + money(active.dividendTaxCredit) + "</strong></p><p>分離課稅稅額：<strong>" + money(active.separateDividendTax) + "</strong></p><p>應補稅：<strong>" + money(active.payableTax) + "</strong></p><p>退稅金額：<strong>" + money(active.refundAmount) + "</strong></p></section>",
+      "<section class=\"breakdown-group\"><h4>有效節稅</h4><p>儲蓄投資特別扣除額：<strong>" + money(active.deductions.savings) + "</strong></p><p>房貸利息支出：<strong>" + money(active.deductions.mortgageInterestExpense || active.deductions.itemizedBreakdown.mortgageInterestExpense) + "</strong></p><p>房貸利息實際可扣：<strong>" + money(active.deductions.mortgageInterest) + "</strong></p><p>房租扣除額：<strong>" + money(active.deductions.rent) + "</strong></p></section>",
+      "<section class=\"breakdown-group\"><h4>其他扣除</h4><p>薪資扣除額：<strong>" + money(active.deductions.salary) + "</strong></p><p>教育扣除額：<strong>" + money(active.deductions.education) + "</strong></p><p>長照扣除額：<strong>" + money(active.deductions.longTermCare) + "</strong></p><p>扣除方式：<strong>" + escapeHtml(active.deductions.mode) + "</strong></p></section>"
+    ].join("");
     document.getElementById("dependentSummary").innerHTML = [
       "扶養人數：" + active.deductions.dependent.count,
       "老人扶養：" + active.deductions.dependent.seniorCount,
@@ -192,9 +287,109 @@
       ? validation.map(function (message) { return "<div>" + escapeHtml(message) + "</div>"; }).join("")
       : "無";
     document.getElementById("taxSavingAnalysis").innerHTML = window.IncomeTaxApp.utils.analysis(result.analysis);
+    renderPlanning(result.planning);
+    document.body.dataset.mode = result.inputData && result.inputData.disclosureMode || "beginner";
     if (window.IncomeTaxApp.charts) {
       window.IncomeTaxApp.charts.render(result);
     }
+  }
+
+  function renderPlanning(planning) {
+    if (!planning) {
+      return;
+    }
+    const forecast = planning.forecastResult || {};
+    document.getElementById("forecastSummary").innerHTML = [
+      "試算年度：" + escapeHtml(planning.forecastYear),
+      "資料來源：" + escapeHtml(forecast.meta && forecast.meta.forecastSourceType === "official" ? "已載入年度資料" : "沿用最新正式年度資料快照"),
+      "快照年度：" + escapeHtml(forecast.meta && forecast.meta.forecastSourceYear ? forecast.meta.forecastSourceYear : planning.forecastYear),
+      "應納稅額：" + money(forecast.payableTax),
+      "退稅：" + money(forecast.refundAmount),
+      "稅率級距：" + escapeHtml(forecast.bracket ? Math.round(forecast.bracket.rate * 100) + "%" : "-")
+    ].join("<br>");
+    document.getElementById("householdMemberSummary").innerHTML = planning.members.map(function (member) {
+      const income = member.income || {};
+      const totalIncome = window.IncomeTaxApp.engine.toNumber(income.salaryIncome)
+        + window.IncomeTaxApp.engine.toNumber(income.professionalIncome)
+        + window.IncomeTaxApp.engine.toNumber(income.dividendIncome)
+        + window.IncomeTaxApp.engine.toNumber(income.interestIncome)
+        + window.IncomeTaxApp.engine.toNumber(income.otherIncome);
+      return escapeHtml(member.name + " / " + member.relationship + " / 所得 " + window.IncomeTaxApp.utils.formatCurrency(totalIncome));
+    }).join("<br>");
+    document.getElementById("forecastDashboard").innerHTML = [
+      "今年稅負：" + money(planning.dashboard.currentPayableTax),
+      "明年預估：" + money(planning.dashboard.nextYearPayableTax),
+      "五年平均稅負：" + money(planning.dashboard.averagePayableTax),
+      "最高稅率年度：" + escapeHtml(planning.dashboard.highestRateYear || "-"),
+      "最佳節稅年度：" + escapeHtml(planning.dashboard.bestSavingYear || "-")
+    ].join("<br>");
+    const maxTax = Math.max.apply(null, planning.multiYearResults.map(function (row) { return window.IncomeTaxApp.engine.toNumber(row.payableTax); }).concat([1]));
+    document.getElementById("multiYearTrend").innerHTML = planning.multiYearResults.map(function (row) {
+      const width = Math.max(4, Math.round(window.IncomeTaxApp.engine.toNumber(row.payableTax) / maxTax * 100));
+      return "<div class=\"trend-row\"><span>" + escapeHtml(row.year) + "</span><div><i style=\"width:" + width + "%\"></i></div><strong>" + money(row.payableTax) + "</strong></div>";
+    }).join("");
+    document.getElementById("combinationRecommendation").innerHTML = window.IncomeTaxApp.utils.analysis(planning.recommendation.map(function (body) {
+      return { title: "最佳申報建議", body: body };
+    }));
+    document.getElementById("deltaComparison").innerHTML = [
+      "應補稅差異：" + money(Math.abs(planning.delta.payableTax)),
+      "退稅差異：" + money(Math.abs(planning.delta.refundAmount)),
+      "扣除額差異：" + money(Math.abs(planning.delta.deductions)),
+      "說明：" + escapeHtml(planning.deltaExplanation.join(" "))
+    ].join("<br>");
+    document.getElementById("taxImpactFactors").innerHTML = planning.impactFactors.map(function (item) {
+      return escapeHtml(item.label) + "：" + money(item.impact);
+    }).join("<br>");
+    document.getElementById("smartWarnings").innerHTML = planning.smartWarnings.length
+      ? planning.smartWarnings.map(escapeHtml).join("<br>")
+      : "無";
+    document.getElementById("interactiveTaxBreakdown").innerHTML = [
+      "課稅所得：" + money(forecast.taxableIncome),
+      "總扣除額：" + money(forecast.totalDeductions),
+      "股利抵減：" + money(forecast.dividendTaxCredit),
+      "分離課稅：" + money(forecast.separateDividendTax),
+      "級距：" + escapeHtml(forecast.bracket ? Math.round(forecast.bracket.rate * 100) + "%" : "-")
+    ].join("<br>");
+    renderCombinationRows(planning.combinations, "payableTax");
+  }
+
+  function renderCombinationRows(combinations, sortKey) {
+    const recommendedOnly = document.getElementById("filterRecommended") && document.getElementById("filterRecommended").checked;
+    const refundOnly = document.getElementById("filterRefund") && document.getElementById("filterRefund").checked;
+    const fiveOnly = document.getElementById("filterFivePercent") && document.getElementById("filterFivePercent").checked;
+    const query = document.getElementById("combinationSearch") ? document.getElementById("combinationSearch").value.trim() : "";
+    const rows = (combinations || []).filter(function (item) {
+      if (recommendedOnly && item.recommendation !== "最佳方案") {
+        return false;
+      }
+      if (refundOnly && item.refundAmount <= 0) {
+        return false;
+      }
+      if (fiveOnly && item.taxBracket !== "5%") {
+        return false;
+      }
+      if (query && item.combinationName.indexOf(query) < 0) {
+        return false;
+      }
+      return true;
+    }).slice().sort(function (a, b) {
+      if (sortKey === "combinationName" || sortKey === "taxBracket") {
+        return String(a[sortKey] || "").localeCompare(String(b[sortKey] || ""));
+      }
+      return window.IncomeTaxApp.engine.toNumber(a[sortKey]) - window.IncomeTaxApp.engine.toNumber(b[sortKey]);
+    });
+    document.getElementById("combinationResults").innerHTML = rows.slice(0, 24).map(function (item) {
+      const taxState = item.refundAmount > 0 ? "退稅 " + money(item.refundAmount) : "應補稅 " + money(item.payableTax);
+      return "<tr class=\"" + (item.recommendation === "最佳方案" ? "best-row" : "") + "\">"
+        + "<td>" + escapeHtml(item.combinationName || item.combinationId) + "</td>"
+        + "<td>" + escapeHtml(item.taxBracket) + "</td>"
+        + "<td>" + money(item.taxableIncome) + "</td>"
+        + "<td>" + taxState + "</td>"
+        + "<td>" + window.IncomeTaxApp.utils.formatPercent(item.effectiveRate) + "</td>"
+        + "<td>" + window.IncomeTaxApp.engine.toNumber(item.recommendationScore) + " / " + escapeHtml(item.confidence) + "</td>"
+        + "<td>" + escapeHtml(item.recommendation) + "</td>"
+        + "</tr>";
+    }).join("");
   }
 
   function setError(visible) {
@@ -208,7 +403,9 @@
     renderVersion: renderVersion,
     renderYearData: renderYearData,
     toggleYearData: toggleYearData,
+    syncYearDataToggle: syncYearDataToggle,
     renderResult: renderResult,
+    renderCombinationRows: renderCombinationRows,
     setError: setError
   };
 }());

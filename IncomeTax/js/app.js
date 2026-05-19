@@ -42,6 +42,7 @@
     window.IncomeTaxApp.state.currentYear = currentData.meta.year;
     window.IncomeTaxApp.state.formData = input;
     const result = window.IncomeTaxApp.strategy.compareFilingStrategies(currentData, input);
+    result.planning = window.IncomeTaxApp.planning.evaluatePlanning(getTaxDataStore(), currentData, input);
     window.IncomeTaxApp.state.result = result;
     window.IncomeTaxApp.storage.saveState(window.IncomeTaxApp.state);
     window.IncomeTaxApp.ui.renderResult(result);
@@ -80,6 +81,19 @@
         name: "",
         relation: "child",
         birthYear: "",
+        salaryIncome: 0,
+        professionalIncome: 0,
+        dividendIncome: 0,
+        interestIncome: 0,
+        otherIncome: 0,
+        insurance: 0,
+        nationalHealthInsurance: 0,
+        medical: 0,
+        childbirth: 0,
+        donationGeneral: 0,
+        donationPolitical: 0,
+        donationPublic: 0,
+        disasterLoss: 0,
         isSenior: false,
         disabled: false,
         sameHousehold: true
@@ -94,7 +108,11 @@
       }
       const index = Array.prototype.indexOf.call(card.parentNode.children, card);
       const field = event.target.dataset.field;
-      window.IncomeTaxApp.state.dependents[index][field] = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+      window.IncomeTaxApp.state.dependents[index][field] = event.target.type === "checkbox"
+        ? event.target.checked
+        : event.target.type === "number"
+          ? window.IncomeTaxApp.engine.toNumber(event.target.value)
+          : event.target.value;
       calculateAndRender();
     });
     document.getElementById("dependentsList").addEventListener("click", function (event) {
@@ -108,6 +126,61 @@
     form.addEventListener("input", calculateAndRender);
   }
 
+  function bindScenarioActions(form) {
+    const saveButton = document.getElementById("quickSaveScenario");
+    const loadButton = document.getElementById("loadSavedScenario");
+    const deleteButton = document.getElementById("deleteSavedScenario");
+    if (saveButton) {
+      saveButton.addEventListener("click", function () {
+        window.IncomeTaxApp.storage.saveScenario("quick", window.IncomeTaxApp.ui.getInput(form));
+      });
+    }
+    if (loadButton) {
+      loadButton.addEventListener("click", function () {
+        const saved = window.IncomeTaxApp.storage.loadScenario("quick");
+        if (!saved) {
+          return;
+        }
+        window.IncomeTaxApp.state = Object.assign(window.IncomeTaxApp.state, saved);
+        window.IncomeTaxApp.ui.setFormValues(form, window.IncomeTaxApp.state);
+        window.IncomeTaxApp.ui.renderDependents(window.IncomeTaxApp.state.dependents || []);
+        calculateAndRender();
+      });
+    }
+    if (deleteButton) {
+      deleteButton.addEventListener("click", function () {
+        window.IncomeTaxApp.storage.deleteScenario("quick");
+      });
+    }
+  }
+
+  function bindCombinationSorting() {
+    document.querySelectorAll(".table-sort").forEach(function (button) {
+      button.addEventListener("click", function () {
+        const planning = window.IncomeTaxApp.state.result && window.IncomeTaxApp.state.result.planning;
+        if (!planning) {
+          return;
+        }
+        window.IncomeTaxApp.ui.renderCombinationRows(planning.combinations, button.dataset.sort);
+      });
+    });
+  }
+
+  function bindCombinationFilters() {
+    ["filterRecommended", "filterRefund", "filterFivePercent", "combinationSearch"].forEach(function (id) {
+      const element = document.getElementById(id);
+      if (!element) {
+        return;
+      }
+      element.addEventListener("input", function () {
+        const planning = window.IncomeTaxApp.state.result && window.IncomeTaxApp.state.result.planning;
+        if (planning) {
+          window.IncomeTaxApp.ui.renderCombinationRows(planning.combinations, "payableTax");
+        }
+      });
+    });
+  }
+
   function init() {
     const form = document.getElementById("taxForm");
     const yearSelect = document.getElementById("taxYear");
@@ -116,12 +189,21 @@
       const availableYears = Object.keys(taxData.years).map(Number).sort(function (a, b) { return a - b; });
       window.IncomeTaxApp.storage.loadState(window.IncomeTaxApp.state);
       currentData = loadTaxData(window.IncomeTaxApp.state.currentYear || taxData.currentYear);
+      window.IncomeTaxApp.state.forecast = Object.assign({
+        forecastMode: false,
+        forecastYear: currentData.meta.year,
+        salaryGrowthRate: 0,
+        dividendGrowthRate: 0,
+        interestGrowthRate: 0
+      }, window.IncomeTaxApp.state.forecast || {});
+      window.IncomeTaxApp.state.forecast.forecastYear = currentData.meta.year;
       applyTheme(window.IncomeTaxApp.state.theme);
       populateYears(yearSelect, availableYears, currentData.meta.year);
       window.IncomeTaxApp.ui.setFormValues(form, window.IncomeTaxApp.state);
       window.IncomeTaxApp.ui.renderDependents(window.IncomeTaxApp.state.dependents);
       window.IncomeTaxApp.ui.renderVersion(currentData);
       window.IncomeTaxApp.ui.renderYearData(currentData);
+      window.IncomeTaxApp.ui.syncYearDataToggle();
       calculateAndRender();
       window.IncomeTaxApp.ui.setError(false);
     } catch (error) {
@@ -130,6 +212,9 @@
     }
 
     bindDependents(form);
+    bindScenarioActions(form);
+    bindCombinationSorting();
+    bindCombinationFilters();
     bindYearDataToggle();
     form.addEventListener("submit", function (event) {
       event.preventDefault();

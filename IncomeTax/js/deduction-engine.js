@@ -10,19 +10,41 @@
   }
 
   function calculateSavingsDeduction(data, interestIncome) {
-    return Math.min(n(interestIncome), getLimit(data, "savings", "limit", 270000));
+    return finiteDeduction(Math.min(n(interestIncome), getLimit(data, "savings", "limit", 270000)));
+  }
+
+  function finiteDeduction(value) {
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  }
+
+  function normalizeMortgageSchema(data) {
+    const source = data || {};
+    const mortgageInterestExpense = Number(source.mortgageInterestExpense || source.mortgageInterest || 0);
+    const normalizedInterest = Number.isFinite(mortgageInterestExpense) ? Math.max(0, Math.floor(mortgageInterestExpense)) : 0;
+    const isOwnerOccupied = source.isOwnerOccupied !== undefined ? source.isOwnerOccupied === true : source.isSelfUseResidence === true;
+    const isRegisteredResidence = source.isRegisteredResidence !== undefined ? source.isRegisteredResidence === true : source.hasHouseholdRegistration === true;
+    const isRentalProperty = source.isRentalProperty !== undefined ? source.isRentalProperty === true : source.isRented === true;
+    return Object.assign({}, source, {
+      mortgageInterestExpense: normalizedInterest,
+      mortgageInterest: normalizedInterest,
+      isOwnerOccupied: isOwnerOccupied,
+      isSelfUseResidence: isOwnerOccupied,
+      isRegisteredResidence: isRegisteredResidence,
+      hasHouseholdRegistration: isRegisteredResidence,
+      isRentalProperty: isRentalProperty,
+      isRented: isRentalProperty
+    });
   }
 
   function calculateMortgageDeduction(data, deduction, savingsDeduction) {
-    const isSelfUseResidence = deduction.isSelfUseResidence === true;
-    const hasHouseholdRegistration = deduction.hasHouseholdRegistration === true;
-    const isRented = deduction.isRented === true || deduction.isBusinessUse === true || deduction.isInvestmentUse === true;
-    if (!isSelfUseResidence || !hasHouseholdRegistration || isRented) {
+    const normalized = normalizeMortgageSchema(deduction);
+    const isRented = normalized.isRentalProperty === true || normalized.isBusinessUse === true || normalized.isInvestmentUse === true;
+    if (!normalized.isOwnerOccupied || !normalized.isRegisteredResidence || isRented) {
       return 0;
     }
     const limit = getLimit(data, "mortgageInterest", "limit", 300000);
-    const netInterest = Math.max(0, n(deduction.mortgageInterest) - n(savingsDeduction));
-    return Math.min(netInterest, limit);
+    const netInterest = Math.max(0, n(normalized.mortgageInterestExpense) - n(savingsDeduction));
+    return finiteDeduction(Math.min(netInterest, limit));
   }
 
   function calculateBasicLivingDeduction(data, values) {
@@ -48,16 +70,18 @@
     const spouseIncluded = taxpayerCount > 1;
     const interestIncome = n(input.taxpayer.interestIncome) + (spouseIncluded ? n(input.spouse.interestIncome) : 0);
     const savingsDeduction = calculateSavingsDeduction(data, interestIncome);
-    const mortgageInterest = calculateMortgageDeduction(data, input.deductions || {}, savingsDeduction);
+    const deduction = normalizeMortgageSchema(input.deductions || {});
+    const mortgageInterest = calculateMortgageDeduction(data, deduction, savingsDeduction);
     return {
       interestIncome: interestIncome,
       savingsDeduction: savingsDeduction,
-      mortgageInterest: mortgageInterest
+      mortgageInterest: finiteDeduction(mortgageInterest),
+      mortgageInterestExpense: deduction.mortgageInterestExpense
     };
   }
 
   function validateMutualExclusion(input) {
-    const deduction = input.deductions || {};
+    const deduction = normalizeMortgageSchema(input.deductions || {});
     const hasRent = n(deduction.rent) > 0;
     const hasMortgage = n(deduction.mortgageInterest) > 0;
     return {
@@ -68,7 +92,7 @@
 
   function calculateItemizedDeduction(data, input, taxpayerCount) {
     const d = data.deductions;
-    const deduction = input.deductions || {};
+    const deduction = normalizeMortgageSchema(input.deductions || {});
     const dependentCount = (input.dependents || []).length;
     const personCount = taxpayerCount + dependentCount;
     const insuranceCap = 24000;
@@ -100,8 +124,9 @@
         donationPublic: donationPublic,
         donationPolitical: donationPolitical,
         disasterLoss: disasterLoss,
-        mortgageInterest: mortgageInterest,
-        mortgageInterestPaid: n(deduction.mortgageInterest),
+        mortgageInterest: finiteDeduction(mortgageInterest),
+        mortgageInterestExpense: n(deduction.mortgageInterestExpense),
+        mortgageInterestPaid: n(deduction.mortgageInterestExpense),
         savingsDeductionApplied: dependencies.savingsDeduction,
         rentSpecial: rentSpecial
       }
@@ -111,6 +136,7 @@
   window.IncomeTaxApp.deductions = {
     calculateItemizedDeduction: calculateItemizedDeduction,
     calculateSavingsDeduction: calculateSavingsDeduction,
+    normalizeMortgageSchema: normalizeMortgageSchema,
     calculateMortgageDeduction: calculateMortgageDeduction,
     calculateBasicLivingDeduction: calculateBasicLivingDeduction,
     applyDeductionDependencies: applyDeductionDependencies,

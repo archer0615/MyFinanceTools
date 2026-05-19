@@ -22,6 +22,7 @@ const context = {
   "js/dependent-engine.js",
   "js/deduction-engine.js",
   "js/tax-engine.js",
+  "js/planning-engine.js",
   "js/household-model.js",
   "js/validation-engine.js",
   "js/orchestration.js",

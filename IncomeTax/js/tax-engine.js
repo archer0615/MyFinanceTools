@@ -11,12 +11,32 @@
     }) || brackets[brackets.length - 1];
   }
 
-  function sumIncome(person) {
-    return toNumber(person.salaryIncome) + toNumber(person.professionalIncome) + toNumber(person.dividendIncome) + toNumber(person.interestIncome) + toNumber(person.otherIncome);
+  function sumIncome(person, includeDividend) {
+    const dividend = includeDividend === false ? 0 : toNumber(person.dividendIncome);
+    return toNumber(person.salaryIncome) + toNumber(person.professionalIncome) + dividend + toNumber(person.interestIncome) + toNumber(person.otherIncome);
   }
 
   function sumInterestIncome(input, spouseIncluded) {
     return toNumber(input.taxpayer.interestIncome) + (spouseIncluded ? toNumber(input.spouse.interestIncome) : 0);
+  }
+
+  function sumDividendIncome(input, spouseIncluded) {
+    return toNumber(input.taxpayer.dividendIncome) + (spouseIncluded ? toNumber(input.spouse.dividendIncome) : 0);
+  }
+
+  function normalizeDividendTaxMode(mode) {
+    return ["combined", "separate", "auto"].includes(mode) ? mode : "auto";
+  }
+
+  function calculateDividendTaxCredit(dividendIncome, dividendTaxMode) {
+    if (dividendTaxMode !== "combined") {
+      return 0;
+    }
+    return Math.min(Number(dividendIncome || 0) * 0.085, 80000);
+  }
+
+  function calculateSeparateDividendTax(dividendIncome) {
+    return Math.round(Number(dividendIncome || 0) * 0.28);
   }
 
   function buildDeductionSet(data, input, options) {
@@ -35,6 +55,7 @@
     const spouseSalary = spouseIncluded ? Math.min(toNumber(input.spouse.salaryIncome), deductions.salary || 0) : 0;
     const interestIncome = sumInterestIncome(input, spouseIncluded);
     const savingsDeduction = window.IncomeTaxApp.deductions.calculateSavingsDeduction(data, interestIncome);
+    const dependencySummary = window.IncomeTaxApp.deductions.applyDeductionDependencies(data, input, taxpayerCount);
     const educationDeduction = toNumber(input.deductions.educationCount) * (deductions.education || 0);
     const preschoolChildren = toNumber(input.deductions.preschoolChildren);
     const preschoolDeduction = preschoolChildren === 0 ? 0 : (deductions.preschool || 0) + Math.max(0, preschoolChildren - 1) * (deductions.preschoolAdditional || deductions.preschool || 0);
@@ -68,7 +89,8 @@
       interestIncome: interestIncome,
       savings: savingsDeduction,
       rent: itemized.breakdown.rentSpecial,
-      mortgageInterest: itemized.breakdown.mortgageInterest,
+      mortgageInterest: dependencySummary.mortgageInterest,
+      mortgageInterestExpense: dependencySummary.mortgageInterestExpense,
       education: educationDeduction,
       preschool: preschoolDeduction,
       longTermCare: longTermCareDeduction,
@@ -93,42 +115,76 @@
 
   function calculateByMode(data, input, options) {
     const spouseIncluded = options.spouseIncluded;
-    const grossIncome = sumIncome(input.taxpayer) + (spouseIncluded ? sumIncome(input.spouse) : 0);
+    const dividendTaxMode = normalizeDividendTaxMode(options.dividendTaxMode || "combined");
+    const includeDividend = dividendTaxMode === "combined";
+    const dividendIncome = sumDividendIncome(input, spouseIncluded);
+    const grossIncome = sumIncome(input.taxpayer, includeDividend) + (spouseIncluded ? sumIncome(input.spouse, includeDividend) : 0);
     const deductions = buildDeductionSet(data, input, options);
     const taxableIncome = Math.max(0, grossIncome - deductions.total);
     const bracket = findBracket(data.taxBrackets, taxableIncome);
-    const taxAmount = Math.max(0, Math.round(taxableIncome * bracket.rate - bracket.quickDeduction));
+    const taxBeforeCredits = Math.max(0, Math.round(taxableIncome * bracket.rate - bracket.quickDeduction));
+    const dividendTaxCredit = Math.round(calculateDividendTaxCredit(dividendIncome, dividendTaxMode));
+    const separateDividendTax = dividendTaxMode === "separate" ? calculateSeparateDividendTax(dividendIncome) : 0;
+    const finalTax = taxBeforeCredits + separateDividendTax - dividendTaxCredit;
+    const payableTax = Math.max(0, finalTax);
+    const refundAmount = Math.max(0, -finalTax);
+    const finalTaxState = finalTax > 0 ? "payable" : finalTax < 0 ? "refund" : "neutral";
 
     return {
       filingType: spouseIncluded ? "joint" : "separate",
+      dividendTaxMode: dividendTaxMode,
+      selectedDividendTaxMode: dividendTaxMode,
       grossIncome: grossIncome,
       totalDeductions: deductions.total,
       taxableIncome: taxableIncome,
-      taxAmount: taxAmount,
-      effectiveRate: grossIncome > 0 ? taxAmount / grossIncome : 0,
+      taxBeforeCredits: taxBeforeCredits,
+      taxAmount: payableTax,
+      payableTax: payableTax,
+      refundAmount: refundAmount,
+      finalTax: finalTax,
+      finalTaxState: finalTaxState,
+      dividendIncome: dividendIncome,
+      dividendTaxCredit: dividendTaxCredit,
+      separateDividendTax: separateDividendTax,
+      effectiveRate: grossIncome > 0 ? payableTax / grossIncome : 0,
       marginalRate: bracket.rate,
       bracket: bracket,
+      meta: data.meta || {},
       deductions: deductions
     };
   }
 
-  function calculateTax(data, input, filingType) {
-    return calculateByMode(data, input, { spouseIncluded: filingType === "joint" });
+  function applyDividendTaxStrategy(data, input, filingType, dividendTaxMode) {
+    const mode = normalizeDividendTaxMode(dividendTaxMode || input.dividendTaxMode);
+    const spouseIncluded = filingType === "joint";
+    const combinedResult = calculateByMode(data, input, { spouseIncluded: spouseIncluded, dividendTaxMode: "combined" });
+    const separateResult = calculateByMode(data, input, { spouseIncluded: spouseIncluded, dividendTaxMode: "separate" });
+    const selectedMode = mode === "auto"
+      ? (separateResult.finalTax < combinedResult.finalTax ? "separate" : "combined")
+      : mode;
+    const selected = selectedMode === "separate" ? separateResult : combinedResult;
+    return Object.assign({}, selected, {
+      selectedDividendTaxMode: selectedMode,
+      dividendStrategy: {
+        selectedMode: selectedMode,
+        combinedResult: combinedResult,
+        separateResult: separateResult
+      }
+    });
+  }
+
+  function calculateTax(data, input, filingType, dividendTaxMode) {
+    return applyDividendTaxStrategy(data, input, filingType, dividendTaxMode || input.dividendTaxMode || "auto");
   }
 
   function compareTaxStrategies(data, input) {
-    const separate = calculateTax(data, input, "separate");
-    const joint = calculateTax(data, input, "joint");
-    const dividendSeparateRate = 0.28;
-    const dividendIncome = toNumber(input.taxpayer.dividendIncome) + toNumber(input.spouse.dividendIncome);
-    const dividendSeparateTax = Math.round(dividendIncome * dividendSeparateRate);
+    const separate = calculateTax(data, input, "separate", input.dividendTaxMode || "auto");
+    const joint = calculateTax(data, input, "joint", input.dividendTaxMode || "auto");
     const scenarios = [
-      Object.assign({}, separate, { key: "separate-merged", dividendMode: "merged" }),
-      Object.assign({}, joint, { key: "joint-merged", dividendMode: "merged" }),
-      Object.assign({}, separate, { key: "separate-dividend-separated", dividendMode: "separated", taxAmount: separate.taxAmount + dividendSeparateTax }),
-      Object.assign({}, joint, { key: "joint-dividend-separated", dividendMode: "separated", taxAmount: joint.taxAmount + dividendSeparateTax })
+      Object.assign({}, separate, { key: "separate-" + separate.selectedDividendTaxMode }),
+      Object.assign({}, joint, { key: "joint-" + joint.selectedDividendTaxMode })
     ];
-    scenarios.sort(function (a, b) { return a.taxAmount - b.taxAmount; });
+    scenarios.sort(function (a, b) { return a.finalTax - b.finalTax; });
     return {
       bestStrategy: scenarios[0].key,
       savedTax: scenarios[scenarios.length - 1].taxAmount - scenarios[0].taxAmount,
@@ -138,6 +194,9 @@
 
   window.IncomeTaxApp.engine = {
     calculateTax: calculateTax,
+    calculateDividendTaxCredit: calculateDividendTaxCredit,
+    calculateSeparateDividendTax: calculateSeparateDividendTax,
+    applyDividendTaxStrategy: applyDividendTaxStrategy,
     compareDeductionStrategies: compareDeductionStrategies,
     compareTaxStrategies: compareTaxStrategies,
     toNumber: toNumber,

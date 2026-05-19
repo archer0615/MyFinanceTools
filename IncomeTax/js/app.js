@@ -1,5 +1,6 @@
 (function () {
   let currentData = null;
+  let renderFrame = null;
 
   function getTaxDataStore() {
     if (!window.IncomeTaxApp || !window.IncomeTaxApp.data || !window.IncomeTaxApp.data.years) {
@@ -43,10 +44,21 @@
     window.IncomeTaxApp.state.formData = input;
     const result = window.IncomeTaxApp.strategy.compareFilingStrategies(currentData, input);
     result.planning = window.IncomeTaxApp.planning.evaluatePlanning(getTaxDataStore(), currentData, input);
+    result.viewModel = window.IncomeTaxApp.planning.buildResultViewModel(result, result.planning);
     window.IncomeTaxApp.state.result = result;
     window.IncomeTaxApp.storage.saveState(window.IncomeTaxApp.state);
-    window.IncomeTaxApp.ui.renderResult(result);
+    scheduleRender(result);
     refreshSpouseVisibility();
+  }
+
+  function scheduleRender(result) {
+    if (renderFrame) {
+      window.cancelAnimationFrame(renderFrame);
+    }
+    renderFrame = window.requestAnimationFrame(function () {
+      renderFrame = null;
+      window.IncomeTaxApp.ui.renderResult(result);
+    });
   }
 
   function applyTheme(theme) {
@@ -152,6 +164,18 @@
         window.IncomeTaxApp.storage.deleteScenario("quick");
       });
     }
+    form.querySelectorAll("input[type=\"range\"]").forEach(function (slider) {
+      slider.addEventListener("input", function () {
+        window.IncomeTaxApp.ui.syncScenarioOutputs(form);
+        calculateAndRender();
+      });
+    });
+    form.querySelectorAll(".scenario-preset").forEach(function (button) {
+      button.addEventListener("click", function () {
+        window.IncomeTaxApp.ui.applyScenarioPreset(form, button.dataset.preset);
+        calculateAndRender();
+      });
+    });
   }
 
   function bindCombinationSorting() {
@@ -167,7 +191,7 @@
   }
 
   function bindCombinationFilters() {
-    ["filterRecommended", "filterRefund", "filterFivePercent", "combinationSearch"].forEach(function (id) {
+    ["filterRecommended", "filterRefund", "filterLowTax", "filterFivePercent", "combinationSearch"].forEach(function (id) {
       const element = document.getElementById(id);
       if (!element) {
         return;
@@ -178,6 +202,36 @@
           window.IncomeTaxApp.ui.renderCombinationRows(planning.combinations, "payableTax");
         }
       });
+    });
+  }
+
+  function bindCombinationPaging() {
+    ["combinationPrevPage", "combinationNextPage"].forEach(function (id) {
+      const element = document.getElementById(id);
+      if (!element) {
+        return;
+      }
+      element.addEventListener("click", function () {
+        const planning = window.IncomeTaxApp.state.result && window.IncomeTaxApp.state.result.planning;
+        const direction = id === "combinationNextPage" ? 1 : -1;
+        window.IncomeTaxApp.ui.changeCombinationPage(direction);
+        if (planning) {
+          window.IncomeTaxApp.ui.renderCombinationRows(planning.combinations, "payableTax");
+        }
+      });
+    });
+  }
+
+  function bindStrategyWorkspace() {
+    const sort = document.getElementById("strategySortMode");
+    if (!sort) {
+      return;
+    }
+    sort.addEventListener("change", function () {
+      const planning = window.IncomeTaxApp.state.result && window.IncomeTaxApp.state.result.planning;
+      if (planning) {
+        window.IncomeTaxApp.ui.renderStrategyWorkspace(planning.strategyWorkspace, sort.value);
+      }
     });
   }
 
@@ -204,6 +258,7 @@
       window.IncomeTaxApp.ui.renderVersion(currentData);
       window.IncomeTaxApp.ui.renderYearData(currentData);
       window.IncomeTaxApp.ui.syncYearDataToggle();
+      window.IncomeTaxApp.ui.syncScenarioOutputs(form);
       calculateAndRender();
       window.IncomeTaxApp.ui.setError(false);
     } catch (error) {
@@ -215,6 +270,8 @@
     bindScenarioActions(form);
     bindCombinationSorting();
     bindCombinationFilters();
+    bindCombinationPaging();
+    bindStrategyWorkspace();
     bindYearDataToggle();
     form.addEventListener("submit", function (event) {
       event.preventDefault();

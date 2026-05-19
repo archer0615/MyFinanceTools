@@ -81,15 +81,35 @@
     return projected;
   }
 
+  function applyRealtimeScenario(taxStore, currentData, input, scenarioOverrides) {
+    const scenarioInput = applyScenarioProjection(input, scenarioOverrides || {});
+    const filingType = scenarioInput.filingMode === "joint" ? "joint" : "separate";
+    const data = currentData || getTaxRuleSnapshot(taxStore, taxStore.currentYear);
+    return {
+      input: scenarioInput,
+      result: window.IncomeTaxApp.engine.calculateTax(data, scenarioInput, filingType, scenarioInput.dividendTaxMode || "auto")
+    };
+  }
+
   function calculateTaxDelta(baseResult, compareResult) {
     const base = baseResult || {};
     const next = compareResult || {};
+    const payableTaxDelta = n(next.payableTax) - n(base.payableTax);
+    const refundDelta = n(next.refundAmount) - n(base.refundAmount);
+    const effectiveRateDelta = Number(next.effectiveRate || 0) - Number(base.effectiveRate || 0);
+    const bracketDelta = (next.bracket && next.bracket.rate || 0) - (base.bracket && base.bracket.rate || 0);
+    const deductionDelta = n(next.totalDeductions) - n(base.totalDeductions);
     return {
-      payableTax: n(next.payableTax) - n(base.payableTax),
-      refundAmount: n(next.refundAmount) - n(base.refundAmount),
-      effectiveRate: Number(next.effectiveRate || 0) - Number(base.effectiveRate || 0),
-      taxBracket: (next.bracket && next.bracket.rate || 0) - (base.bracket && base.bracket.rate || 0),
-      deductions: n(next.totalDeductions) - n(base.totalDeductions)
+      payableTaxDelta: payableTaxDelta,
+      refundDelta: refundDelta,
+      effectiveRateDelta: effectiveRateDelta,
+      bracketDelta: bracketDelta,
+      deductionDelta: deductionDelta,
+      payableTax: payableTaxDelta,
+      refundAmount: refundDelta,
+      effectiveRate: effectiveRateDelta,
+      taxBracket: bracketDelta,
+      deductions: deductionDelta
     };
   }
 
@@ -123,8 +143,14 @@
     return strategyRegistry.slice();
   }
 
-  function rankStrategies(strategies) {
+  function rankStrategies(strategies, objective) {
     return (strategies || []).slice().sort(function (a, b) {
+      if (objective === "maxRefund") {
+        return n(b.refundAmount) - n(a.refundAmount) || n(a.payableTax) - n(b.payableTax);
+      }
+      if (objective === "minEffectiveRate") {
+        return Number(a.effectiveRate || 0) - Number(b.effectiveRate || 0) || n(a.payableTax) - n(b.payableTax);
+      }
       return n(a.payableTax) - n(b.payableTax) || n(b.refundAmount) - n(a.refundAmount) || Number(a.effectiveRate || 0) - Number(b.effectiveRate || 0);
     });
   }
@@ -136,6 +162,10 @@
       forecast: input && input.forecast || {},
       optimization: input && input.optimization || {}
     };
+  }
+
+  function toggleExperienceMode(mode) {
+    return mode === "advanced" ? "advanced" : "beginner";
   }
 
   function memberId(index) {
@@ -398,25 +428,117 @@
       return reasons;
     }
     if (baseline && best.payableTax < baseline.payableTax) {
-      reasons.push("推薦原因：應補稅最低。");
+      reasons.push({
+        type: "saving",
+        priority: "high",
+        message: "此方案應納稅額較基準方案降低 " + (n(baseline.payableTax) - n(best.payableTax)) + " 元。",
+        confidence: "high"
+      });
     }
     if (best.refundAmount > 0) {
-      reasons.push("推薦原因：可產生退稅。");
+      reasons.push({
+        type: "refund",
+        priority: "medium",
+        message: "此方案可產生退稅 " + n(best.refundAmount) + " 元。",
+        confidence: "medium"
+      });
     }
-    if (baseline && best.result.bracket.rate < baseline.result.bracket.rate) {
-      reasons.push("推薦原因：稅率級距下降。");
+    if (baseline && best.result && baseline.result && best.result.bracket.rate < baseline.result.bracket.rate) {
+      reasons.push({
+        type: "bracket",
+        priority: "high",
+        message: "稅率由 " + bracketLabel(baseline.result) + " 降至 " + bracketLabel(best.result) + "。",
+        confidence: "high"
+      });
     }
-    return reasons.length ? reasons : ["推薦原因：此方案整體稅負較穩定。"];
+    return reasons.length ? reasons : [{
+      type: "stability",
+      priority: "medium",
+      message: "此方案整體稅負較穩定。",
+      confidence: "medium"
+    }];
   }
 
   function scoreRecommendations(results) {
     return (results || []).map(function (item) {
-      const score = Math.max(0, 1000000 - n(item.payableTax)) + n(item.refundAmount) - Math.round(Number(item.effectiveRate || 0) * 100000);
+      const risk = item.recommendation === "高稅負方案" ? 30 : 5;
+      const complexity = item.members && item.members.length > 2 ? 10 : 3;
+      const taxSavingsScore = Math.max(0, 1000000 - n(item.payableTax)) + n(item.refundAmount);
+      const score = taxSavingsScore - Math.round(Number(item.effectiveRate || 0) * 100000) - (risk * 1000) - (complexity * 500);
+      const category = risk >= 30 ? "warning" : score > 930000 ? "highly recommended" : score > 820000 ? "recommended" : "informational";
+      const categoryLabel = {
+        "highly recommended": "高度推薦",
+        recommended: "推薦",
+        informational: "資訊",
+        warning: "注意"
+      }[category];
       return Object.assign({}, item, {
         recommendationScore: score,
-        confidence: score > 900000 ? "high" : score > 700000 ? "medium" : "low"
+        recommendationCategory: category,
+        recommendationCategoryLabel: categoryLabel,
+        confidence: score > 900000 ? "high" : score > 700000 ? "medium" : "low",
+        scoreFactors: {
+          taxSavings: taxSavingsScore,
+          risk: risk,
+          complexity: complexity,
+          confidence: score > 900000 ? 90 : score > 700000 ? 70 : 45
+        }
       });
     });
+  }
+
+  function filterCombinationResults(results, filters) {
+    const options = filters || {};
+    const query = String(options.query || "").trim();
+    return (results || []).filter(function (item) {
+      if (options.onlyRecommended && item.recommendation !== "最佳方案" && item.recommendationCategory !== "highly recommended") {
+        return false;
+      }
+      if (options.onlyRefund && n(item.refundAmount) <= 0) {
+        return false;
+      }
+      if (options.onlyLowTax && n(item.payableTax) > 0) {
+        return false;
+      }
+      if (options.onlyFivePercent && item.taxBracket !== "5%") {
+        return false;
+      }
+      if (query && String(item.combinationName || "").indexOf(query) < 0) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function classifyCombination(item) {
+    if (!item) {
+      return "不推薦";
+    }
+    if (item.recommendation === "最佳方案") {
+      return "最低稅負";
+    }
+    if (n(item.refundAmount) > 0) {
+      return "高退稅";
+    }
+    if (item.recommendationCategory === "warning") {
+      return "高風險";
+    }
+    return item.recommendation === "高稅負方案" ? "不推薦" : "最低稅負";
+  }
+
+  function buildStrategyWorkspace(results) {
+    const rows = (results || []).map(function (item) {
+      return Object.assign({}, item, {
+        strategyName: item.combinationName || item.combinationId,
+        category: classifyCombination(item)
+      });
+    });
+    return {
+      minTax: rankStrategies(rows, "minTax")[0] || null,
+      maxRefund: rankStrategies(rows, "maxRefund")[0] || null,
+      minEffectiveRate: rankStrategies(rows, "minEffectiveRate")[0] || null,
+      rows: rankStrategies(rows, "minTax").slice(0, 12)
+    };
   }
 
   function rankTaxImpactFactors(baseResult, compareResult) {
@@ -449,26 +571,61 @@
     for (let index = 0; index < 5; index += 1) {
       projected = Object.assign({}, projected, {
         taxpayer: projectPersonIncome(projected.taxpayer, {
-          salaryGrowthRate: source.salaryGrowthRate || 0,
-          dividendGrowthRate: source.dividendGrowthRate || 0,
-          interestGrowthRate: source.interestGrowthRate || 0
+          salaryGrowthRate: source.salaryGrowthRate || source.salaryGrowth || 0,
+          dividendGrowthRate: source.dividendGrowthRate || source.dividendGrowth || 0,
+          interestGrowthRate: source.interestGrowthRate || source.inflationRate || 0
         })
       });
       const data = getTaxRuleSnapshot(taxStore, startYear + index);
       const result = window.IncomeTaxApp.engine.calculateTax(data, projected, projected.filingMode === "joint" ? "joint" : "separate", projected.dividendTaxMode || "auto");
-      results.push({ year: startYear + index, result: result, payableTax: result.payableTax, refundAmount: result.refundAmount });
+      results.push({
+        year: startYear + index,
+        result: result,
+        payableTax: result.payableTax,
+        refundAmount: result.refundAmount,
+        effectiveRate: result.effectiveRate,
+        bracket: bracketLabel(result)
+      });
     }
     return results;
   }
 
-  function buildResultViewModel(result) {
+  function buildResultViewModel(result, planning) {
+    const source = result || {};
+    const active = source.activeResult || {};
+    const plan = planning || source.planning || {};
     return {
-      payableTax: n(result && result.payableTax),
-      refundAmount: n(result && result.refundAmount),
-      effectiveRate: result && result.effectiveRate || 0,
-      taxBracket: bracketLabel(result),
-      taxableIncome: n(result && result.taxableIncome),
-      totalDeductions: n(result && result.totalDeductions)
+      summary: {
+        payableTax: n(active.payableTax),
+        refundAmount: n(active.refundAmount),
+        finalTaxState: active.finalTaxState,
+        grossIncome: n(active.grossIncome),
+        taxableIncome: n(active.taxableIncome),
+        totalDeductions: n(active.totalDeductions),
+        effectiveRate: active.effectiveRate || 0,
+        marginalRate: active.marginalRate || 0,
+        bestStrategy: source.recommendedLabel || "-"
+      },
+      recommendation: {
+        primary: (plan.recommendation || []).slice(0, 4),
+        reasons: plan.recommendationReasons || [],
+        intelligence: (plan.combinations || []).slice(0, 3)
+      },
+      comparison: {
+        delta: plan.delta || null,
+        base: plan.deltaBase || null,
+        compare: plan.deltaCompare || null,
+        impactFactors: plan.impactFactors || []
+      },
+      forecast: {
+        dashboard: plan.dashboard || null,
+        timeline: plan.timelineForecast || [],
+        multiYear: plan.multiYearResults || []
+      },
+      warnings: {
+        validation: source.diagnostics || [],
+        smart: plan.smartWarnings || []
+      }
     };
   }
 
@@ -545,22 +702,37 @@
     const baseResult = baseline && baseline.result;
     const bestResult = rankedCombinations[0] && rankedCombinations[0].result;
     const delta = calculateTaxDelta(baseResult, bestResult);
-    const scoredCombinations = scoreRecommendations(rankedCombinations);
+    const scoredCombinations = scoreRecommendations(rankedCombinations).map(function (item) {
+      return Object.assign({}, item, { category: classifyCombination(item) });
+    });
+    const strategyWorkspace = buildStrategyWorkspace(scoredCombinations);
+    const realtimeScenario = applyRealtimeScenario(taxStore, currentData, input, input.scenarioOverrides || {});
+    const timelineForecast = simulateTimelineForecast(taxStore, input, {
+      startYear: selectedYear || taxStore.currentYear,
+      salaryGrowthRate: forecast.salaryGrowthRate,
+      dividendGrowthRate: forecast.dividendGrowthRate,
+      interestGrowthRate: forecast.inflationRate || forecast.interestGrowthRate
+    });
     return {
       forecastYear: forecastYear,
       forecastInput: forecastInput,
       forecastResult: forecastResult,
       members: members,
       combinations: scoredCombinations,
+      strategyWorkspace: strategyWorkspace,
       multiYearResults: multiYearResults,
       dashboard: dashboard,
       delta: delta,
+      deltaBase: baseResult,
+      deltaCompare: bestResult,
       deltaExplanation: generateDeltaExplanation(delta),
+      scenarioResult: realtimeScenario.result,
+      timelineForecast: timelineForecast,
       impactFactors: rankTaxImpactFactors(baseResult, bestResult),
       smartWarnings: generateSmartWarnings(forecastResult),
       recommendation: analyzeBestCombination(rankedCombinations[0], baseline)
-        .concat(generateRecommendations(forecastResult, { combinations: rankedCombinations }))
-        .concat(generateRecommendationReasons(rankedCombinations[0], baseline))
+        .concat(generateRecommendations(forecastResult, { combinations: rankedCombinations })),
+      recommendationReasons: generateRecommendationReasons(rankedCombinations[0], baseline)
     };
   }
 
@@ -568,10 +740,12 @@
     getTaxRuleSnapshot: getTaxRuleSnapshot,
     projectNextYearIncome: projectNextYearIncome,
     applyScenarioProjection: applyScenarioProjection,
+    applyRealtimeScenario: applyRealtimeScenario,
     calculateTaxDelta: calculateTaxDelta,
     generateDeltaExplanation: generateDeltaExplanation,
     registerStrategy: registerStrategy,
     rankStrategies: rankStrategies,
+    toggleExperienceMode: toggleExperienceMode,
     deriveTaxState: deriveTaxState,
     defaultHouseholdMembers: defaultHouseholdMembers,
     buildHouseholdMembers: buildHouseholdMembers,
@@ -584,6 +758,9 @@
     optimizeTaxStrategy: optimizeTaxStrategy,
     generateRecommendationReasons: generateRecommendationReasons,
     scoreRecommendations: scoreRecommendations,
+    filterCombinationResults: filterCombinationResults,
+    classifyCombination: classifyCombination,
+    buildStrategyWorkspace: buildStrategyWorkspace,
     rankTaxImpactFactors: rankTaxImpactFactors,
     generateSmartWarnings: generateSmartWarnings,
     simulateTimelineForecast: simulateTimelineForecast,

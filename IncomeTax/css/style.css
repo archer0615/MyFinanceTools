@@ -40,6 +40,9 @@ body.dark-theme {
 
 body[data-mode="beginner"] .advanced-planning-panel,
 body[data-mode="beginner"] .chart-grid,
+body[data-mode="beginner"] .advanced-only,
+body[data-mode="beginner"] #multiYearTrend,
+body[data-mode="beginner"] #timelineForecastPanel,
 body[data-mode="beginner"] .tax-knowledge-panel {
   display: none;
 }

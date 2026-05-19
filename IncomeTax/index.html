@@ -144,6 +144,34 @@
 
         <details>
           <summary>情境與年度模擬</summary>
+          <section class="scenario-workspace" aria-label="Scenario Workspace">
+            <h3 class="form-section-title">Scenario Workspace</h3>
+            <div class="scenario-slider-grid">
+              <label>薪資
+                <input name="scenarioSalarySlider" type="range" min="-500000" max="1000000" step="10000" value="0">
+                <output data-for="scenarioSalarySlider">0</output>
+              </label>
+              <label>股利
+                <input name="scenarioDividendSlider" type="range" min="-500000" max="500000" step="10000" value="0">
+                <output data-for="scenarioDividendSlider">0</output>
+              </label>
+              <label>利息
+                <input name="scenarioInterestSlider" type="range" min="-100000" max="200000" step="5000" value="0">
+                <output data-for="scenarioInterestSlider">0</output>
+              </label>
+              <label>房貸
+                <input name="scenarioMortgageSlider" type="range" min="-300000" max="300000" step="5000" value="0">
+                <output data-for="scenarioMortgageSlider">0</output>
+              </label>
+            </div>
+            <div class="scenario-actions">
+              <button class="secondary-button scenario-preset" type="button" data-preset="promotion">升職加薪</button>
+              <button class="secondary-button scenario-preset" type="button" data-preset="halfDividend">股利減半</button>
+              <button class="secondary-button scenario-preset" type="button" data-preset="addDependent">新增扶養</button>
+              <button class="secondary-button scenario-preset" type="button" data-preset="moreMortgage">房貸增加</button>
+            </div>
+            <div id="scenarioRealtimeSummary" class="scenario-summary"></div>
+          </section>
           <div class="details-grid">
             <label class="check"><input name="forecastMode" type="checkbox">使用上方年度資料直接試算</label>
             <label>試算年度<input name="forecastYear" type="number" min="2024" max="2100" step="1" readonly></label>
@@ -228,10 +256,22 @@
           <h3>最佳方案分析</h3>
           <div id="combinationRecommendation" class="analysis"></div>
         </section>
+        <section class="result-block analysis-block">
+          <h3>Recommendation Insight Panel</h3>
+          <div id="recommendationInsightPanel" class="recommendation-insights"></div>
+        </section>
+        <section class="result-block advanced-only">
+          <h3>Recommendation Intelligence</h3>
+          <div id="recommendationIntelligence" class="breakdown"></div>
+        </section>
       </div>
       <section class="result-block">
         <h3>五年稅負趨勢</h3>
         <div id="multiYearTrend" class="trend-bars"></div>
+      </section>
+      <section class="result-block">
+        <h3>Timeline Forecast Panel</h3>
+        <div id="timelineForecastPanel" class="timeline-forecast"></div>
       </section>
       <section class="result-block">
         <h3>家庭成員資料</h3>
@@ -242,8 +282,12 @@
         <div class="table-controls">
           <label class="check"><input id="filterRecommended" type="checkbox">只看推薦</label>
           <label class="check"><input id="filterRefund" type="checkbox">只看退稅</label>
+          <label class="check"><input id="filterLowTax" type="checkbox">只看低稅負</label>
           <label class="check"><input id="filterFivePercent" type="checkbox">只看 5% 級距</label>
           <label>搜尋組合<input id="combinationSearch" type="search" placeholder="輸入姓名"></label>
+          <button id="combinationPrevPage" class="secondary-button table-page-button" type="button">上一頁</button>
+          <button id="combinationNextPage" class="secondary-button table-page-button" type="button">下一頁</button>
+          <span id="combinationPageStatus" class="table-page-status">-</span>
         </div>
         <div class="table-scroll">
           <table class="combination-table">
@@ -259,6 +303,33 @@
               </tr>
             </thead>
             <tbody id="combinationResults"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="result-block">
+        <h3>Tax Strategy Workspace</h3>
+        <div class="table-controls">
+          <label>策略排序
+            <select id="strategySortMode">
+              <option value="minTax">最低稅負</option>
+              <option value="maxRefund">最大退稅</option>
+              <option value="minEffectiveRate">最低有效稅率</option>
+            </select>
+          </label>
+        </div>
+        <div id="strategyWorkspaceSummary" class="breakdown"></div>
+        <div class="table-scroll">
+          <table class="combination-table">
+            <thead>
+              <tr>
+                <th>策略</th>
+                <th>應納稅</th>
+                <th>退稅</th>
+                <th>有效稅率</th>
+                <th>推薦</th>
+              </tr>
+            </thead>
+            <tbody id="strategyWorkspaceRows"></tbody>
           </table>
         </div>
       </section>
